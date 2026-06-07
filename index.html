@@ -1,0 +1,702 @@
+<!DOCTYPE html><html lang="pt-br"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>NOC Telemetria</title>
+<script src="https://unpkg.com/@phosphor-icons/web"></script><script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+<style>
+:root{--p:#1976d2;--pl:#f0f7ff;--s:#0d47a1;--a:#29b6f6;--bg:#f5f8fa;--c:#fff;--t:#1a1c1d;--m:#606f7b;--b:#dae1e7;--r:12px}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif}
+body{background:var(--bg);color:var(--t);display:flex;height:100vh;overflow:hidden}
+.sb{width:240px;background:var(--c);border-right:1px solid var(--b);display:flex;flex-direction:column;padding:20px 0;transition:.3s; z-index:10;}
+.sb h2{color:var(--p);font-size:18px;display:flex;align-items:center;gap:10px;padding:0 20px 20px;border-bottom:1px solid var(--b);margin-bottom:20px}
+.nav{flex:1;display:flex;flex-direction:column;gap:5px;padding:0 15px}
+.ni{display:flex;align-items:center;gap:12px;padding:12px 15px;color:var(--m);border-radius:8px;font-weight:600;cursor:pointer;transition:.2s}
+.ni:hover{background:var(--pl);color:var(--p)} .ni.act{background:var(--p);color:#fff}
+main{flex:1;overflow-y:auto;padding:30px;position:relative;}
+.vw{display:none;animation:fi .4s ease} .vw.act{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px; gap:15px; flex-wrap:wrap;}
+.hdr h1{font-size:24px;color:var(--s)}
+.t-bdg{background:var(--pl);color:var(--p);padding:8px 16px;border-radius:20px;font-weight:700;font-size:14px;border:1px solid var(--p)}
+.crd{background:var(--c);border-radius:var(--r);padding:25px;box-shadow:0 4px 20px rgba(0,0,0,.05);border:1px solid var(--b);margin-bottom:20px}
+.fr{display:flex;gap:15px;flex-wrap:wrap;margin-bottom:15px} .fg{flex:1;min-width:200px;display:flex;flex-direction:column}
+label{font-size:12px;font-weight:700;color:var(--m);margin-bottom:6px;text-transform:uppercase}
+input,select,textarea{width:100%;padding:12px 15px;border:1px solid var(--b);border-radius:8px;font-size:14px;background:#fff;color:var(--t);transition:.3s;outline:0}
+input:focus,select:focus,textarea:focus{border-color:var(--p);background:var(--pl);box-shadow:0 0 0 3px rgba(25, 118, 210, 0.1)}
+input[type="checkbox"]{width:auto; transform:scale(1.2); margin-right:8px; cursor:pointer;}
+.ig{display:flex;gap:8px}
+.btn{padding:12px 20px;border:0;border-radius:8px;font-weight:600;cursor:pointer;transition:.3s;display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+.bp{background:var(--p);color:#fff} .bp:hover{background:#1565c0;transform:translateY(-2px)}
+.ba{background:var(--s);color:#fff} .ba:hover{background:#0a3b85;transform:translateY(-2px)}
+.bo{background:0 0;border:1px solid var(--b);color:var(--t)} .bo:hover{background:#f1f2f6}
+.bi{background:var(--pl);color:var(--p);border:1px solid var(--p);border-radius:8px;cursor:pointer;width:45px;display:flex;align-items:center;justify-content:center} .bi:hover{background:var(--p);color:#fff}
+.ag{display:flex;gap:10px;margin-top:20px}
+.sbar{display:flex;gap:10px;margin-bottom:20px;background:var(--pl);padding:15px;border-radius:var(--r);border:1px solid var(--b)}
+.osi{background:#fff;border:1px solid var(--b);border-radius:var(--r);padding:20px;margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;gap:15px;transition:.2s;border-left:4px solid var(--stc,var(--p))}
+.osi:hover{box-shadow:0 4px 20px rgba(0,0,0,.05);transform:translateY(-2px)}
+.osi h4{color:var(--s);font-size:16px;display:flex;align-items:center;gap:6px} .osi p{margin:4px 0;font-size:13px;color:var(--m)}
+.bdg{padding:4px 10px;border-radius:20px;font-weight:700;font-size:11px;text-transform:uppercase;background:#f8f9fa;border:1px solid var(--b);color:var(--m)}
+.bdg.and{background:#fff8e1;color:#f39c12;border-color:#ffeaa7} .bdg.con{background:#e8f8f5;color:#2ecc71;border-color:#a3e4d7}
+.osa{display:flex;flex-direction:column;gap:10px;align-items:flex-end} .osv{font-size:18px;font-weight:800;color:var(--p)}
+.cat{display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid var(--b)}
+.cG{display:grid;grid-template-columns:repeat(7,1fr);gap:5px} .cDh{text-align:center;font-weight:700;font-size:11px;color:var(--m);padding:5px 0}
+.cD{background:var(--c);border:1px solid var(--b);border-radius:6px;min-height:75px;padding:5px;cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:3px}
+.cD:hover{border-color:var(--p);background:var(--pl)} .cD.td{background:var(--pl);border-color:var(--p)} .cD.sl{border-color:var(--a);box-shadow:0 0 0 2px var(--a) inset}
+.cDn{font-weight:700;font-size:12px;color:var(--s);margin-bottom:3px}
+.cE{font-size:9px;padding:3px 4px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.cE.ag{background:var(--pl);color:var(--p);border:1px solid #c4e1df} .cE.an{background:#fff8e1;color:#f39c12;border:1px solid #ffeaa7} .cE.co{background:#e8f8f5;color:#2ecc71;border:1px solid #a3e4d7}
+.kG{display:flex;gap:15px;margin-bottom:20px} .kC{flex:1;background:var(--c);border:1px solid var(--b);border-radius:var(--r);padding:20px;border-left:4px solid var(--p)}
+.kC h3{font-size:12px;color:var(--m);text-transform:uppercase;display:flex;align-items:center;gap:5px} .kC p{font-size:22px;font-weight:800;color:var(--p);margin-top:5px}
+
+/* KANBAN EXECUÇÃO */
+.kanban{display:flex;gap:20px;height:calc(100vh - 120px);overflow-x:auto;padding-bottom:10px}
+.k-col{flex:1;min-width:300px;background:#eef2f6;border-radius:var(--r);display:flex;flex-direction:column;max-height:100%; border-top:4px solid var(--p)}
+.k-col.ag{border-top-color:#3498db} .k-col.an{border-top-color:#f39c12} .k-col.co{border-top-color:#2ecc71}
+.k-col h3{padding:15px;font-size:14px;text-transform:uppercase;color:var(--s);border-bottom:1px solid var(--b);margin:0;display:flex;justify-content:space-between}
+.k-lst{padding:15px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1}
+.k-crd{background:var(--c);padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05);border-left:4px solid var(--p);cursor:pointer;transition:.2s}
+.k-crd:hover{transform:translateY(-3px);box-shadow:0 6px 12px rgba(0,0,0,0.1); border-color:var(--s)}
+.k-crd h4{font-size:14px;color:var(--s);margin-bottom:8px;display:flex;justify-content:space-between}
+.k-crd p{font-size:12px;color:var(--m);margin:4px 0;display:flex;align-items:center;gap:5px}
+
+/* TELA DE LOGIN & MODAL EXTRATO */
+#v-login{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;background-image:radial-gradient(var(--b) 1px,transparent 0);background-size:20px 20px;}
+.l-box{background:var(--c);padding:40px;border-radius:var(--r);box-shadow:0 10px 30px rgba(0,0,0,.1);width:100%;max-width:400px;border:1px solid var(--b)}
+.mod-bg { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:99999; display:none; align-items:center; justify-content:center; padding:20px; }
+.mod-box { background:var(--c); width:100%; max-width:600px; border-radius:var(--r); padding:25px; max-height:90vh; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:fi .3s ease; }
+
+/* PDF DE IMPRESSÃO */
+#pArea { display: none; }
+@media print { body * { visibility: hidden; } #pArea, #pArea * { visibility: visible; } #pArea { display: block; position: absolute; left: 0; top: 0; width: 100%; padding: 20px; font-family: sans-serif; background: #fff; } .print-hdr { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; display:flex; justify-content:space-between; align-items:flex-end;} .print-hdr h1 { font-size: 28px; margin:0; color:#000; } .print-hdr p { margin:0; font-size: 14px; color:#555; } .p-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; } .p-box { border: 1px solid #ddd; padding: 15px; border-radius: 8px; } .p-box h4 { margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; color: #666; } .p-box p { margin: 5px 0; font-size: 14px; font-weight: bold; color: #000; } .p-chk { display: flex; gap: 15px; flex-wrap:wrap; font-size: 12px; margin-top: 10px; } .p-img { max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #ccc; display: block; margin: 20px auto; } }
+@media(max-width:768px){body{flex-direction:column}.sb{width:100%;height:auto;flex-direction:row;align-items:center;justify-content:space-between;padding:10px}.sb h2{border:0;margin:0;padding:0}.nav{flex-direction:row;overflow-x:auto;padding:0}.ni{padding:8px 12px;white-space:nowrap}.ag,.osi,.kG{flex-direction:column;align-items:flex-start}.osa{width:100%;flex-direction:row;justify-content:space-between} .kanban{height:auto; flex-direction:column; overflow:visible}}
+</style></head>
+<body>
+
+<div id="v-login">
+    <div class="l-box">
+        <h2 style="color:var(--p);font-size:24px;margin-bottom:5px;display:flex;align-items:center;justify-content:center;gap:10px"><i class="ph-fill ph-crosshair"></i> NOC Telemetria</h2>
+        <p style="color:var(--m);font-size:14px;text-align:center;margin-bottom:30px">Acesso ao Sistema</p>
+        <form id="fLog" onsubmit="event.preventDefault(); window.fazerLogin();">
+            <div class="fg" style="margin-bottom:15px"><label>Usuário ou E-mail</label><input type="text" id="lUser" placeholder="Ex: admin" required autocomplete="off"></div>
+            <div class="fg" style="margin-bottom:25px"><label>Senha de Acesso</label><input type="password" id="lPass" placeholder="••••••" required></div>
+            <button type="submit" class="btn bp" style="width:100%;font-size:16px;padding:15px"><i class="ph ph-sign-in"></i> ENTRAR</button>
+        </form>
+    </div>
+</div>
+
+<aside class="sb">
+    <h2><i class="ph-fill ph-crosshair"></i> NOC</h2>
+    <nav class="nav">
+        <div class="ni act" onclick="sv('v-dsh',this)"><i class="ph ph-squares-four"></i> Dashboard</div>
+        <div class="ni" onclick="sv('v-exe',this)"><i class="ph ph-kanban"></i> Execução (Status)</div>
+        <div class="ni" onclick="sv('v-os',this)"><i class="ph ph-plus-circle"></i> Nova O.S</div>
+        <div class="ni" onclick="sv('v-hst',this)"><i class="ph ph-calendar"></i> Agenda O.S</div>
+        <div class="ni" onclick="sv('v-fin',this)"><i class="ph ph-currency-dollar"></i> Financeiro</div>
+        <div class="ni" onclick="sv('v-cli',this)"><i class="ph ph-users"></i> Clientes (Extratos)</div>
+        <div class="ni" onclick="sv('v-cat',this)"><i class="ph ph-wrench"></i> Catálogo</div>
+        <div class="ni" onclick="sv('v-usr',this)"><i class="ph ph-user-gear"></i> Usuários</div>
+    </nav>
+    <div style="padding:0 15px; margin-top:auto">
+        <p id="lblUserLog" style="font-size:11px; text-align:center; color:var(--m); margin-bottom:10px; font-weight:bold;"></p>
+        <div class="ni" style="color:#e74c3c" onclick="logOut()"><i class="ph ph-sign-out"></i> Sair do Sistema</div>
+    </div>
+</aside>
+<main>
+
+<section id="v-dsh" class="vw act">
+    <div class="hdr">
+        <h1>Painel de Controle</h1>
+        <div style="display:flex; gap:10px">
+            <button class="btn bo" style="padding:6px 12px;font-size:12px" onclick="bNuv()" title="Baixar dados da Planilha"><i class="ph ph-cloud-arrow-down"></i> Consultar Nuvem</button>
+            <button class="btn bo" style="padding:6px 12px;font-size:12px" onclick="optMem()" title="Limpar cache de O.S. já sincronizadas"><i class="ph ph-database"></i> Otimizar BD</button>
+        </div>
+    </div>
+    <div class="sbar"><div class="ig" style="width:100%"><i class="ph ph-calendar" style="font-size:20px;color:var(--p);margin:auto 10px"></i><input type="month" id="dshMes" onchange="rDsh()" style="border:0;background:0 0;flex:1"><button class="btn bo" style="padding:10px" onclick="$('dshMes').value='';rDsh()"><i class="ph ph-x"></i> Ver Todo Período</button></div></div>
+    <div class="kG"><div class="kC" style="border-left-color:#2ecc71"><h3 style="color:#2ecc71"><i class="ph ph-check-circle"></i> O.S Concluídas</h3><p id="dCo">0</p></div><div class="kC" style="border-left-color:#f39c12"><h3 style="color:#f39c12"><i class="ph ph-clock"></i> O.S em Andamento</h3><p id="dAn">0</p></div><div class="kC" style="border-left-color:var(--p)"><h3><i class="ph ph-calendar-check"></i> Agendamentos</h3><p id="dAg">0</p></div></div>
+    <div class="fr"><div class="crd" style="flex:2"><h3 style="margin-bottom:15px;color:var(--s);font-size:16px"><i class="ph ph-chart-bar"></i> Faturamento <span id="lblFat" style="font-size:12px;color:var(--m);font-weight:normal">(Mensal)</span></h3><canvas id="cBar" style="max-height:300px;width:100%"></canvas></div><div class="crd" style="flex:1"><h3 style="margin-bottom:15px;color:var(--s);font-size:16px"><i class="ph ph-chart-pie-slice"></i> Status dos Serviços</h3><canvas id="cPie" style="max-height:300px;width:100%"></canvas></div></div>
+</section>
+
+<section id="v-exe" class="vw">
+    <div class="hdr">
+        <h1>Quadro de Execução</h1>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+            <button class="btn bo" style="padding:6px 12px;font-size:12px; color:var(--s); border-color:var(--s)" onclick="calcRota()" title="Ordena pelo GPS"><i class="ph ph-crosshair"></i> Roteirizar</button>
+            <button class="btn bp" style="padding:6px 12px;font-size:12px;" onclick="navMaps()"><i class="ph ph-map-trifold"></i> Gerar Rota Mapa</button>
+            <button class="btn bo" style="padding:6px 12px;font-size:12px" onclick="sNuv()"><i class="ph ph-arrows-clockwise"></i> Sincronizar Tudo</button>
+        </div>
+    </div>
+    <div id="kBoard" class="kanban">
+        <div class="k-col ag"><h3><span>Agendado</span><i class="ph ph-calendar"></i></h3><div id="kAg" class="k-lst"></div></div>
+        <div class="k-col an"><h3><span>Em Andamento</span><i class="ph ph-wrench"></i></h3><div id="kAn" class="k-lst"></div></div>
+        <div class="k-col co"><h3><span>Concluído</span><i class="ph ph-check-circle"></i></h3><div id="kCo" class="k-lst"></div></div>
+    </div>
+    <div id="kExec" class="crd" style="display:none; position:absolute; top:30px; left:30px; right:30px; bottom:30px; z-index:50; overflow-y:auto; border:2px solid var(--p)">
+        <div class="hdr"><h2 id="exTit" style="color:var(--p)">O.S #</h2><button class="btn bo" onclick="fEx()"><i class="ph ph-x"></i> Fechar Execução</button></div>
+        <div class="sbar" id="exInf" style="background:#f8f9fa; display:grid; grid-template-columns:1fr 1fr; gap:10px"></div>
+        <form id="fExe">
+            <input type="hidden" id="exId">
+            <div class="fr">
+                <div class="fg" style="flex:1"><label>Mudar Status</label><select id="exSts" style="font-weight:bold; color:var(--s)"><option value="Agendado">Agendado</option><option value="Em Andamento">Em Andamento</option><option value="Concluído">Concluído</option></select></div>
+                <div class="fg" style="flex:2"><label><i class="ph ph-camera"></i> Evidência Fotográfica</label><input type="file" id="cam" accept="image/*" capture="environment" style="display:none"><button type="button" class="btn bo" onclick="$('cam').click()"><i class="ph ph-camera"></i> Bater Foto da Instalação</button><img id="fPrv" style="display:none;width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-top:10px;border:1px solid var(--b)"></div>
+            </div>
+            <div class="fr" style="margin-top:15px; margin-bottom:15px">
+                <div class="fg"><label>Movimentação de Equipamento</label><select id="exMov" onchange="chgMov()" style="font-weight:bold; color:var(--p)"><option value="">Nenhuma / Outros</option><option value="Instalação">Nova Instalação</option><option value="Manutenção">Manutenção (Troca)</option><option value="Retirada">Retirada Definitiva</option></select></div>
+            </div>
+            <div class="fr" id="dEqArea" style="display:none; margin-bottom:20px; padding:15px; background:var(--pl); border-radius:8px; border:1px solid var(--p)">
+                <div class="fg" id="dEqInst" style="display:none"><label>ID/IMEI Instalado</label><input type="text" id="eqInst" placeholder="Ex: 8645..."></div>
+                <div class="fg" id="dEqRet" style="display:none"><label>ID/IMEI Retirado</label><input type="text" id="eqRet" placeholder="Ex: 8645..."></div>
+            </div>
+            <div class="crd" style="padding:15px; margin-bottom:20px; box-shadow:none; background:var(--bg); border:1px solid var(--b)">
+                <label style="margin-bottom:15px; color:var(--s); font-size:14px"><i class="ph ph-list-checks"></i> Checklist de Vistoria e Qualidade</label>
+                <div class="fr" style="margin-bottom:0; gap:20px">
+                    <label style="text-transform:none;color:var(--t);font-weight:600;display:flex;align-items:center"><input type="checkbox" id="ckPnl" onchange="chkIn(this)"> Painel Intacto</label>
+                    <label style="text-transform:none;color:var(--t);font-weight:600;display:flex;align-items:center"><input type="checkbox" id="ckSet" onchange="chkIn(this)"> Setas/Faróis OK</label>
+                    <label style="text-transform:none;color:var(--t);font-weight:600;display:flex;align-items:center"><input type="checkbox" id="ckIgn" onchange="chkIn(this)"> Ignição OK</label>
+                    <label style="text-transform:none;color:var(--p);font-weight:600;display:flex;align-items:center"><input type="checkbox" id="ckCom"> Rastreador Comunicando</label>
+                    <label style="text-transform:none;color:#e74c3c;font-weight:600;display:flex;align-items:center"><input type="checkbox" id="ckRsc" onchange="chkIn(this)"> Possui Avarias</label>
+                </div>
+            </div>
+            <button type="submit" class="btn bp" style="width:100%; font-size:16px; padding:15px"><i class="ph ph-check-circle"></i> SALVAR DADOS DA EXECUÇÃO</button>
+        </form>
+    </div>
+</section>
+
+<!-- NOVA O.S -->
+<section id="v-os" class="vw"><div class="hdr"><h1>Cadastrar Novo Serviço</h1></div><div class="crd"><form id="fOs"><input type="hidden" id="eId"><div class="fr"><div class="fg" style="flex:2"><label>Cliente</label><input type="text" id="cli" list="lCli" required autocomplete="off" oninput="aF()"><datalist id="lCli"></datalist></div><div class="fg"><label>Veículo / Placa</label><input type="text" id="vei" style="text-transform:uppercase" required></div></div><div class="fr"><div class="fg"><label>Data</label><input type="date" id="dat" required></div><div class="fg"><label>Horário</label><input type="time" id="hor" required></div></div><div class="fr"><div class="fg" style="flex:2"><label>Endereço</label><input type="text" id="end" onblur="bGPS()" placeholder="Digite o endereço e clique fora para buscar o GPS..."></div><div class="fg"><label>GPS</label><div class="ig"><input type="text" id="gps" placeholder="-8.05,-34.88"><button type="button" class="bi" onclick="cGPS()" title="Meu Local"><i class="ph ph-crosshair"></i></button><button type="button" class="bi" onclick="oMap()" title="Ver no Mapa"><i class="ph ph-map-trifold"></i></button></div></div></div>
+<div class="fr"><div class="fg" style="flex:2;background:var(--bg);padding:15px;border-radius:var(--r);border:1px dashed var(--b)"><label><i class="ph ph-lightning"></i> Catálogo Rápido</label><select id="sCat" onchange="aCat()"></select></div></div>
+<div class="fg" style="margin-bottom:15px"><label>Descrição Completa</label><textarea id="dsc" rows="3" required></textarea></div><div class="fr"><div class="fg"><label>Status Inicial</label><select id="sts"><option>Agendado</option><option>Em Andamento</option><option>Concluído</option></select></div><div class="fg"><label>Pagamento</label><select id="pag"><option value="0">Pendente</option><option value="1">Pago</option></select></div><div class="fg"><label>Valor (R$)</label><input type="number" id="val" step="0.01" min="0" required></div></div><div class="ag"><button type="submit" id="bSal" class="btn bp" style="flex:2"><i class="ph ph-cloud-arrow-up"></i> CADASTRAR O.S</button><button type="button" onclick="gPOS()" class="btn ba" style="flex:1"><i class="ph ph-whatsapp-logo"></i> PRÉ-O.S</button></div><button type="button" id="bCan" class="btn bo" style="width:100%;margin-top:10px;display:none" onclick="cEd()">Cancelar Edição</button></form></div></section>
+
+<!-- AGENDA / HISTÓRICO -->
+<section id="v-hst" class="vw"><div class="hdr"><h1>Agenda de O.S</h1><div style="display:flex;gap:10px;align-items:center"><button class="btn bo" style="padding:6px 12px;font-size:12px" onclick="bNuv()"><i class="ph ph-cloud-arrow-down"></i> Consultar Nuvem</button><button class="btn bo" style="padding:6px 12px;font-size:12px" onclick="sNuv()"><i class="ph ph-arrows-clockwise"></i> Sincronizar</button></div></div><div class="crd" style="padding:15px"><div class="hdr" style="margin-bottom:15px;justify-content:center;gap:20px"><button class="btn bo" style="padding:5px 15px" onclick="cMes(-1)"><i class="ph ph-caret-left"></i></button><h3 id="calM" style="color:var(--s);font-size:16px;text-transform:uppercase;margin:0">Mês</h3><button class="btn bo" style="padding:5px 15px" onclick="cMes(1)"><i class="ph ph-caret-right"></i></button></div><div style="overflow-x:auto;padding-bottom:5px"><div id="cGrid" class="cG" style="min-width:650px"></div></div></div><div class="sbar"><div class="ig" style="flex:3"><button class="bi" style="border:0"><i class="ph ph-magnifying-glass"></i></button><input type="text" id="bTxt" placeholder="Buscar por cliente, placa ou id..." style="border:0;background:0 0"></div><input type="date" id="bDat" style="flex:1;display:none"><button class="btn bo" style="padding:10px" onclick="lFlt()" title="Mostrar Tudo"><i class="ph ph-x"></i> Tudo</button></div><div id="lOs"></div></section>
+
+<!-- FINANCEIRO COM FILTRO DE CLIENTES -->
+<section id="v-fin" class="vw">
+    <div class="hdr"><h1>Gestão Financeira</h1><button class="btn bo" style="padding:6px 12px;font-size:12px" onclick="xCSV('o')"><i class="ph ph-download-simple"></i> Extrair Excel</button></div>
+    <div class="kG">
+        <div class="kC" style="border-left-color:#2ecc71"><h3 style="color:#2ecc71"><i class="ph ph-check-circle"></i> Recebido</h3><p id="tRec" style="color:#2ecc71">R$ 0,00</p></div>
+        <div class="kC" style="border-left-color:#f39c12"><h3 style="color:#f39c12"><i class="ph ph-clock"></i> A Receber</h3><p id="tPen" style="color:#f39c12">R$ 0,00</p></div>
+        <div class="kC"><h3><i class="ph ph-sigma"></i> Faturamento</h3><p id="tTot">R$ 0,00</p></div>
+    </div>
+    <div class="sbar">
+        <div class="ig" style="width:100%; flex-wrap:wrap;">
+            <i class="ph ph-calendar" style="font-size:20px;color:var(--p);margin:auto 10px"></i>
+            <input type="month" id="fMes" onchange="rFin()" style="border:0;background:0 0;flex:1; min-width:130px;">
+            <div style="width:1px; background:var(--b); margin:0 10px;"></div>
+            <i class="ph ph-users" style="font-size:20px;color:var(--p);margin:auto 10px"></i>
+            <input type="text" id="fCliFiltro" list="lCli" oninput="rFin()" placeholder="Filtrar por cliente..." style="border:0;background:0 0;flex:2; min-width:150px;">
+            <button class="btn bo" style="padding:10px" onclick="$('fMes').value='';$('fCliFiltro').value='';rFin()"><i class="ph ph-x"></i> Limpar Filtros</button>
+        </div>
+    </div>
+    <div id="lFin"></div>
+</section>
+
+<!-- CLIENTES (AGORA COM VISÃO DE EXTRATO FINANCEIRO) -->
+<section id="v-cli" class="vw"><div class="hdr"><h1>Clientes e Histórico</h1><button class="btn bo" style="padding:6px 12px;font-size:12px" onclick="xCSV('c')"><i class="ph ph-download-simple"></i> Extrair Tabela Clientes</button></div><div class="crd"><form id="fCli"><input type="hidden" id="cId"><div class="fr"><div class="fg" style="flex:2"><label>Nome</label><input type="text" id="cNom" required autocomplete="off"></div><div class="fg"><label>CNPJ/CPF</label><input type="text" id="cDoc" autocomplete="off"></div></div><div class="fr"><div class="fg"><label>Tel</label><input type="text" id="cTel" autocomplete="off"></div><div class="fg"><label>E-mail</label><input type="email" id="cEma" autocomplete="off"></div><div class="fg"><label>Contato</label><input type="text" id="cRes" autocomplete="off"></div></div><div class="fr"><div class="fg" style="flex:3"><label>Endereço</label><input type="text" id="cEnd" autocomplete="off"></div><div class="ig" style="align-items:flex-end;flex:1"><button type="submit" id="bCSal" class="btn bp" style="width:100%"><i class="ph ph-plus"></i> Salvar</button><button type="button" id="bCCan" class="btn bo" style="display:none" onclick="cCEd()"><i class="ph ph-x"></i></button></div></div></form></div><div class="sbar"><div class="ig" style="width:100%"><button class="bi" style="border:0"><i class="ph ph-magnifying-glass"></i></button><input type="text" id="bCliTxt" placeholder="Pesquisar..." style="border:0;background:0 0;flex:1"></div></div><div id="lCliRnd"></div></section>
+
+<section id="v-cat" class="vw"><div class="hdr"><h1>Catálogo</h1><button class="btn bo" style="padding:6px 12px;font-size:12px" onclick="xCSV('k')"><i class="ph ph-download-simple"></i> Extrair Excel</button></div><div class="crd"><form id="fCat" class="fr" style="align-items:flex-end"><div class="fg" style="flex:2"><label>Nome</label><input type="text" id="nCat" required></div><div class="fg"><label>Valor (R$)</label><input type="number" id="vCat" step="0.01" min="0" required></div><button type="submit" class="btn bp"><i class="ph ph-plus"></i></button></form><div id="rCat" style="margin-top:20px"></div><button class="btn bo" onclick="rCatP()" style="margin:25px auto 0"><i class="ph ph-arrows-counter-clockwise"></i> Padrão</button></div></section>
+
+<section id="v-usr" class="vw">
+    <div class="hdr"><h1>Controle de Usuários</h1></div>
+    <div class="crd">
+        <form id="fUsr">
+            <input type="hidden" id="uId">
+            <div class="fr">
+                <div class="fg" style="flex:2"><label>Nome Completo</label><input type="text" id="uNom" required autocomplete="off"></div>
+                <div class="fg"><label>Usuário / E-mail</label><input type="text" id="uUser" required autocomplete="off"></div>
+                <div class="fg"><label>Senha</label><input type="password" id="uPass" required></div>
+            </div>
+            <div class="ag">
+                <button type="submit" id="bUSal" class="btn bp"><i class="ph ph-plus"></i> Salvar Usuário</button>
+                <button type="button" id="bUCan" class="btn bo" style="display:none" onclick="cUEd()"><i class="ph ph-x"></i> Cancelar</button>
+            </div>
+        </form>
+    </div>
+    <div id="lUsrRnd"></div>
+</section>
+
+<!-- MODAL DE EXTRATO DO CLIENTE -->
+<div id="mExtrato" class="mod-bg">
+    <div class="mod-box">
+        <div class="hdr" style="margin-bottom:15px"><h2 id="mExtNome" style="color:var(--s); font-size:18px">Cliente</h2><button class="btn bo" style="padding:5px 10px" onclick="fExt()"><i class="ph ph-x"></i></button></div>
+        <div style="display:flex; gap:10px; margin-bottom:15px">
+            <div style="flex:1; background:var(--bg); padding:10px; border-radius:8px; text-align:center"><p style="font-size:11px; color:var(--m); margin:0; text-transform:uppercase">Total Faturado</p><b id="mExtTot" style="color:var(--s)">R$ 0,00</b></div>
+            <div style="flex:1; background:#e8f8f5; padding:10px; border-radius:8px; text-align:center"><p style="font-size:11px; color:#27ae60; margin:0; text-transform:uppercase">Recebido</p><b id="mExtPag" style="color:#2ecc71">R$ 0,00</b></div>
+            <div style="flex:1; background:#fdedec; padding:10px; border-radius:8px; text-align:center"><p style="font-size:11px; color:#c0392b; margin:0; text-transform:uppercase">Pendente</p><b id="mExtPen" style="color:#e74c3c">R$ 0,00</b></div>
+        </div>
+        <div id="mExtList" style="max-height:300px; overflow-y:auto; border:1px solid var(--b); border-radius:8px"></div>
+        <button class="btn bo" style="width:100%; margin-top:15px; color:var(--p); border-color:var(--p)" onclick="xCSVCli()"><i class="ph ph-download-simple"></i> Baixar Histórico (Excel)</button>
+    </div>
+</div>
+
+<div id="pArea"></div>
+</main>
+
+<script>
+// FUNÇÕES BASE
+const $ = i => document.getElementById(i);
+const $$ = q => document.querySelectorAll(q);
+const v = i => { let e = $(i); return e ? e.value : ''; };
+const ls = localStorage;
+const s = JSON.stringify;
+const lf = localforage;
+
+const tst = { fire: function(opt) { try { Swal.fire({toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true, ...opt}); } catch(e) {} } };
+
+const sv=(id,el)=>{
+    try {
+        $$('.vw, .ni').forEach(x=>x.classList.remove('act'));
+        if($(id)) $(id).classList.add('act');
+        if(el) el.classList.add('act');
+        if(id=='v-hst'){rL();rCal();} if(id=='v-fin')rFin(); if(id=='v-cli')rCli(); if(id=='v-dsh')rDsh(); if(id=='v-exe')rExe(); if(id=='v-usr')rUsr();
+    } catch(e) {}
+};
+
+const fM=val=>Number(val).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const fD=d=>d?d.split('-').reverse().join('/'):'';
+
+window.usrLat = null; window.usrLon = null;
+const getDist = (lat1, lon1, lat2, lon2) => {
+    let R = 6371; let dLat = (lat2-lat1)*Math.PI/180; let dLon = (lon2-lon1)*Math.PI/180;
+    let a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+};
+
+let dbC = [], dbO = [], dbCat = [], dbU = [];
+
+window.onload = async () => {
+    try {
+        if(ls.getItem('dbO')) { await lf.setItem('dbO', JSON.parse(ls.getItem('dbO')||'[]')); ls.removeItem('dbO'); }
+        if(ls.getItem('dbC')) { await lf.setItem('dbC', JSON.parse(ls.getItem('dbC')||'[]')); ls.removeItem('dbC'); }
+        if(ls.getItem('dbCat')) { await lf.setItem('dbCat', JSON.parse(ls.getItem('dbCat')||'[]')); ls.removeItem('dbCat'); }
+        if(ls.getItem('dbU')) { await lf.setItem('dbU', JSON.parse(ls.getItem('dbU')||'[]')); ls.removeItem('dbU'); }
+    } catch(e) {}
+
+    dbO = (await lf.getItem('dbO')) || []; dbC = (await lf.getItem('dbC')) || [];
+    dbCat = (await lf.getItem('dbCat')) || [{id:1,nome:"Instalação Rastreador",valor:150},{id:2,nome:"Manutenção Rastreador",valor:80},{id:3,nome:"Retirada",valor:100},{id:4,nome:"Relé",valor:60},{id:5,nome:"Teclado",valor:100},{id:6,nome:"DVR",valor:120}];
+    dbU = (await lf.getItem('dbU')) || [];
+
+    let admIdx = dbU.findIndex(u => u && u.user === 'admin');
+    if (admIdx !== -1) { dbU[admIdx].pass = 'El123!@#'; } else { dbU.push({id: 1, user: 'admin', pass: 'El123!@#', nome: 'Administrador'}); }
+    await lf.setItem('dbU', dbU);
+
+    if(ls.getItem('noc_auth') !== '1') { $('v-login').style.display = 'flex'; } else { $('v-login').style.display = 'none'; iniciarApp(); }
+};
+
+window.fazerLogin = function() {
+    try {
+        let u = v('lUser').trim().toLowerCase(), pass = v('lPass');
+        let found = dbU.find(x => x && x.user && (x.user.toLowerCase() === u) && x.pass === pass);
+        if(u === 'admin' && pass === 'El123!@#') found = {nome: 'Administrador', user: 'admin'};
+        if(found) {
+            ls.setItem('noc_auth', '1'); ls.setItem('noc_user', found.nome);
+            $('v-login').style.display = 'none'; iniciarApp(); tst.fire({icon:'success', title:`Bem-vindo, ${found.nome}!`});
+        } else { try { Swal.fire('Acesso Negado', 'Usuário/senha incorretos!', 'error'); } catch(ex) { alert('Acesso Negado'); } }
+    } catch (err) { alert('Erro: ' + err.message); }
+};
+
+window.logOut = () => { ls.removeItem('noc_auth'); window.location.reload(); };
+
+const iniciarApp = async () => {
+    try {
+        if($('lblUserLog')) $('lblUserLog').innerText = `Logado como: ${ls.getItem('noc_user')}`;
+        let d=new Date();
+        try { cEd(); aDl(); rC(); rL(); rCal(); rCli(); } catch(e){}
+        try { if($('fMes')) $('fMes').value=d.toISOString().slice(0,7); } catch(e){}
+        try { rFin(); } catch(e){}
+        try { if($('dshMes')) $('dshMes').value=''; } catch(e){}
+        try { rDsh(); rExe(); rUsr(); } catch(e){}
+        optMem(true);
+    } catch(err) {}
+}
+
+const CLOUD_URL = 'https://api.cloudinary.com/v1_1/dkkmhbcvh/image/upload', UP_PRESET = 'warbuqc6';
+const GAS_URL = 'COLE_SEU_LINK_AQUI_TERMINANDO_EM_/exec'; 
+
+window.bNuv = async () => {
+    if(!navigator.onLine) { try{ Swal.fire('Offline','Sem conexão.','warning'); } catch(e){ alert('Sem internet'); } return; }
+    if(!GAS_URL.includes('/exec')) { try{ Swal.fire('Erro','Configure o link Google Script','error'); } catch(e){ alert('Link incorreto'); } return; }
+    try { Swal.fire({title:'Consultando Planilha...', text:'Transferindo dados da nuvem...', allowOutsideClick:!1, didOpen:()=>Swal.showLoading()}); } catch(e){}
+    try {
+        let r = await fetch(GAS_URL), cData = await r.json(); if(cData.error) throw new Error(cData.error);
+        let lUns = dbO.filter(o => o.sync === 0), merged = [...cData];
+        lUns.forEach(lu => { let idx = merged.findIndex(c => c.id == lu.id); if(idx !== -1) merged[idx] = lu; else merged.push(lu); });
+        dbO = merged; await lf.setItem('dbO', dbO);
+        dbO.forEach(o => { if(o.cli && !dbC.find(c=>c.nome===o.cli)){ dbC.push({id:Date.now()+Math.random(), nome:o.cli, tel:'', doc:'', ema:'', res:'', end:o.end||''}); }});
+        await lf.setItem('dbC', dbC); aDl(); rCli(); rL(); rCal(); rFin(); rDsh(); rExe();
+        try{ Swal.fire('Sincronizado!', `${cData.length} ordens de serviço consultadas com sucesso.`, 'success'); } catch(e){ alert('Sucesso!'); }
+    } catch(e) { try{ Swal.fire('Erro', 'Falha ao buscar os dados da planilha.', 'error'); } catch(ex){ alert('Erro de sincronização'); } }
+};
+
+window.sNuv = async () => {
+    if(!navigator.onLine) { try{Swal.fire('Offline','Sem internet.','warning')}catch(e){alert('Offline')} return; }
+    let pd=dbO.filter(o=>!o.sync); if(!pd.length) { tst.fire({icon:'info',title:'Tudo sincronizado!'}); return; }
+    try{Swal.fire({title:'Sincronizando...',text:`Enviando ${pd.length} O.S`,allowOutsideClick:!1,didOpen:()=>Swal.showLoading()})}catch(e){}
+    let sc=0;
+    for(let o of pd){
+        try{
+            if(o.b64 && !o.fotoUrl){
+                let fd=new FormData();fd.append('file',o.b64);fd.append('upload_preset',UP_PRESET);
+                let r=await fetch(CLOUD_URL,{method:'POST',body:fd});let res=await r.json();o.fotoUrl=res.secure_url;delete o.b64;
+            }
+            let sd={...o};delete sd.b64;await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:s(sd)}); o.sync=1;sc++;
+        }catch(e){}
+    }
+    await lf.setItem('dbO', dbO); rL(); rCal(); rFin(); rExe(); 
+    try{Swal.fire('Concluído',`${sc} de ${pd.length} enviadas!`,sc==pd.length?'success':'warning')}catch(e){alert('Sincronizado')}
+};
+
+window.optMem = async (silent = false) => {
+    let limitDate = new Date(); limitDate.setDate(limitDate.getDate() - 30);
+    let len = dbO.length; dbO = dbO.filter(o => o.sync === 0 || new Date(o.dat) >= limitDate);
+    let diff = len - dbO.length;
+    if(diff > 0) { await lf.setItem('dbO', dbO); if(!silent) { rDsh(); rExe(); rL(); rCal(); rFin(); try{ Swal.fire('Memória Otimizada', `${diff} registos limpos do BD local.`, 'success'); }catch(e){} }
+    } else { if(!silent) tst.fire({icon:'info', title:'Sistema já otimizado!'}); }
+};
+
+window.calcRota = () => {
+    if(!navigator.geolocation) { try{ Swal.fire('Erro', 'Seu navegador não suporta GPS.', 'error'); } catch(e){} return; }
+    try{ Swal.fire({title:'Procurando Satélites',text:'Buscando sua localização...',allowOutsideClick:!1,didOpen:()=>Swal.showLoading()}); } catch(e){}
+    navigator.geolocation.getCurrentPosition(p => {
+        window.usrLat = p.coords.latitude; window.usrLon = p.coords.longitude;
+        Swal.close(); tst.fire({icon:'success', title:'GPS Travado! O.S. Ordenadas.'}); rExe();
+    }, err => { try{ Swal.fire('Sem Sinal', 'Permita o acesso ao GPS do seu navegador para roteirizar.', 'warning'); } catch(e){ alert('GPS Negado'); } }, {enableHighAccuracy: true, timeout: 10000});
+};
+
+window.navMaps = () => {
+    let pnd = dbO.filter(o=> (o.sts=='Agendado' || o.sts=='Em Andamento') && o.gps);
+    if(!pnd.length) { try{ Swal.fire('Agenda Vazia', 'Não há serviços pendentes com GPS cadastrado.', 'info'); }catch(e){} return; }
+    if(window.usrLat && window.usrLon) {
+        pnd.forEach(o => { let pts = o.gps.split(','); o._d = getDist(window.usrLat, window.usrLon, parseFloat(pts[0]), parseFloat(pts[1])); });
+        pnd.sort((a,b) => a._d - b._d);
+    }
+    let url = `https://www.google.com/maps/dir/`;
+    if(window.usrLat && window.usrLon) url += `${window.usrLat},${window.usrLon}/`;
+    pnd.slice(0, 9).forEach(o => { url += `${o.gps.replace(/ /g,'')}/`; });
+    window.open(url, '_blank');
+};
+
+if($('fUsr')) {
+    $('fUsr').onsubmit = async e => {
+        e.preventDefault(); let id = v('uId'), o = {nome: v('uNom').trim(), user: v('uUser').trim().toLowerCase(), pass: v('uPass')};
+        if(id) { let idx = dbU.findIndex(x => x.id == id); if(idx !== -1) dbU[idx] = {...dbU[idx], ...o}; } else { o.id = Date.now(); dbU.push(o); }
+        await lf.setItem('dbU', dbU); cUEd(); rUsr(); tst.fire({icon:'success', title:'Utilizador salvo!'});
+    };
+}
+window.edUsr = id => {
+    let u = dbU.find(x => x.id == id);
+    if($('uId')) $('uId').value = id; if($('uNom')) $('uNom').value = u.nome; if($('uUser')) $('uUser').value = u.user; if($('uPass')) $('uPass').value = u.pass;
+    if($('bUSal')) $('bUSal').innerHTML = "Atualizar Usuário"; if($('bUCan')) $('bUCan').style.display = "block"; sv('v-usr',$$('.ni')[7]); window.scrollTo(0,0);
+};
+window.cUEd = () => { if($('fUsr')) $('fUsr').reset(); if($('uId')) $('uId').value = ""; if($('bUSal')) $('bUSal').innerHTML = "<i class='ph ph-plus'></i> Salvar Usuário"; if($('bUCan')) $('bUCan').style.display = "none"; };
+window.exUsr = async id => {
+    if(dbU.length <= 1) { try{ Swal.fire('Erro', 'Necessita de pelo menos 1 administrador.', 'error'); }catch(e){} return; }
+    try { Swal.fire({title:'Excluir Utilizador?', icon:'warning', showCancelButton:!0, confirmButtonColor:'#d33'}).then(async r => { if(r.isConfirmed) { dbU = dbU.filter(u => u.id !== id); await lf.setItem('dbU', dbU); rUsr(); } }); } 
+    catch(e) { if(confirm("Excluir Utilizador?")) { dbU = dbU.filter(u => u.id !== id); lf.setItem('dbU', dbU).then(()=>rUsr()); } }
+};
+const rUsr = () => {
+    if(!$('lUsrRnd')) return; let l = $('lUsrRnd'); l.innerHTML = '';
+    dbU.map(u => { l.innerHTML += `<div class="osi" style="padding:20px; align-items:center;"><div class="oi"><h4><i class="ph ph-user"></i> ${u.nome}</h4><p><i class="ph ph-identification-card"></i> Utilizador: <b>${u.user}</b></p></div><div class="ig"><button class="btn bo" style="padding:6px 12px" onclick="edUsr(${u.id})"><i class="ph ph-pencil"></i></button><button class="btn bo" style="padding:6px 12px;color:#e74c3c" onclick="exUsr(${u.id})"><i class="ph ph-trash"></i></button></div></div>`; });
+};
+
+window.chkIn = el => {
+    if(el && el.id === 'ckRsc') { if(!$('ckRsc').checked) { if($('ckPnl'))$('ckPnl').checked = true; if($('ckSet'))$('ckSet').checked = true; if($('ckIgn'))$('ckIgn').checked = true; } } 
+    else { if(!$('ckPnl').checked || !$('ckSet').checked || !$('ckIgn').checked) { if($('ckRsc'))$('ckRsc').checked = true; } else { if($('ckRsc'))$('ckRsc').checked = false; } }
+};
+
+window.chgMov = () => {
+    let m = v('exMov'); if($('dEqArea')) $('dEqArea').style.display = m ? 'flex' : 'none';
+    if($('dEqInst')) $('dEqInst').style.display = (m === 'Instalação' || m === 'Manutenção') ? 'flex' : 'none';
+    if($('dEqRet')) $('dEqRet').style.display = (m === 'Retirada' || m === 'Manutenção') ? 'flex' : 'none';
+};
+
+const rDsh = () => {
+    let m = v('dshMes'), f = dbO.filter(o => m ? o.dat.startsWith(m) : true);
+    let co=0, an=0, ag=0; f.forEach(o=>{ if(o.sts=="Concluído")co++; else if(o.sts=="Em Andamento")an++; else if(o.sts=="Agendado")ag++; });
+    if($('dCo')) $('dCo').innerText=co; if($('dAn')) $('dAn').innerText=an; if($('dAg')) $('dAg').innerText=ag;
+    if($('lblFat')) $('lblFat').innerText = m ? '(Diário)' : '(Mensal)';
+    try {
+        if(chrtB) chrtB.destroy(); if(chrtP) chrtP.destroy();
+        if($('cPie')) chrtP = new Chart($('cPie'), { type:'doughnut', data:{ labels:['Concluído','Andamento','Agendado'], datasets:[{ data:[co,an,ag], backgroundColor:['#2ecc71','#f39c12','#1976d2'] }] }, options:{responsive:true, maintainAspectRatio:false} });
+        let mo = {}, lbls = [], dts = [];
+        if(!m) {
+            dbO.filter(o=>o.pag==1).forEach(o=>{ let mk = o.dat.slice(0,7); mo[mk] = (mo[mk]||0) + o.val; });
+            lbls = Object.keys(mo).sort().slice(-6); dts = lbls.map(k=>mo[k]); lbls = lbls.map(l=>l.split('-').reverse().join('/'));
+        } else {
+            f.filter(o=>o.pag==1).forEach(o=>{ let mk = o.dat; mo[mk] = (mo[mk]||0) + o.val; });
+            lbls = Object.keys(mo).sort(); dts = lbls.map(k=>mo[k]); lbls = lbls.map(l=>l.split('-').reverse().slice(0,2).join('/'));
+        }
+        if($('cBar')) chrtB = new Chart($('cBar'), { type:'bar', data:{ labels:lbls, datasets:[{ label:'Faturamento (R$)', data:dts, backgroundColor:'#29b6f6', borderRadius:4 }] }, options:{responsive:true, maintainAspectRatio:false} });
+    } catch(e) {}
+};
+
+const rExe = () => {
+    if(!$('kAg')) return; $('kAg').innerHTML=''; $('kAn').innerHTML=''; $('kCo').innerHTML='';
+    let list = [...dbO];
+    if(window.usrLat && window.usrLon) {
+        list.forEach(o => {
+            if(o.gps) { let pts = o.gps.split(','); if(pts.length==2) o._d = getDist(window.usrLat, window.usrLon, parseFloat(pts[0]), parseFloat(pts[1])); else o._d = 99999; } else o._d = 99999;
+        });
+        list.sort((a,b) => a._d - b._d);
+    } else { list.sort((a,b)=>b.id-a.id); }
+
+    list.map(o=>{
+        let distHtml = o._d && o._d !== 99999 ? `<span style="font-size:11px; background:#e3f2fd; color:#1976d2; padding:2px 6px; border-radius:4px; margin-left:10px;"><i class="ph ph-navigation-arrow"></i> ${o._d.toFixed(1)} km</span>` : '';
+        let c = `<div class="k-crd" style="border-left-color:${o.sts=='Concluído'?'#2ecc71':(o.sts=='Em Andamento'?'#f39c12':'#3498db')}" onclick="aEx(${o.id})">
+            <h4>#${o.id.toString().slice(-6)} ${distHtml}</h4>
+            <p><i class="ph ph-buildings"></i> ${o.cli.substring(0,25)}</p>
+            <p><i class="ph ph-truck"></i> <b>${o.vei}</b></p>
+            <p style="margin-top:8px; color:var(--a); font-weight:bold"><i class="ph ph-arrow-circle-right"></i> Preencher / Executar</p>
+        </div>`;
+        if(o.sts=="Agendado") $('kAg').innerHTML+=c; else if(o.sts=="Em Andamento") $('kAn').innerHTML+=c; else $('kCo').innerHTML+=c;
+    });
+};
+
+window.aEx = id => {
+    let o = dbO.find(x=>x.id==id); if($('exId')) $('exId').value = id; 
+    if($('exTit')) $('exTit').innerText = `O.S #${id.toString().slice(-6)} - ${o.vei}`;
+    if($('exSts')) $('exSts').value = o.sts == "Agendado" ? "Em Andamento" : o.sts; 
+    if($('exInf')) $('exInf').innerHTML = `<div><p style="color:var(--m);font-size:12px;margin:0">CLIENTE</p><b>${o.cli}</b></div><div><p style="color:var(--m);font-size:12px;margin:0">SERVIÇO</p><b>${o.dsc}</b></div>`;
+    if($('exMov')) $('exMov').value = o.mov || ''; if($('eqInst')) $('eqInst').value = o.eqI || ''; if($('eqRet')) $('eqRet').value = o.eqR || ''; chgMov();
+    if($('ckPnl')) $('ckPnl').checked = o.ck ? o.ck[0] : true; if($('ckSet')) $('ckSet').checked = o.ck ? o.ck[1] : true;
+    if($('ckIgn')) $('ckIgn').checked = o.ck ? o.ck[2] : true; if($('ckCom')) $('ckCom').checked = o.ck && o.ck.length > 4 ? o.ck[3] : true;
+    if($('ckRsc')) $('ckRsc').checked = o.ck && o.ck.length > 4 ? o.ck[4] : (o.ck ? o.ck[3] : false);
+    if(o.fotoUrl||o.b64){let u=o.fotoUrl||o.b64; if($('fPrv')){ $('fPrv').src=u;$('fPrv').style.display='block';$('fPrv').dataset.url=o.fotoUrl||'';imgB64=o.b64||''; }}else{ if($('fPrv')){ $('fPrv').style.display='none';$('fPrv').dataset.url='';imgB64=''; }}
+    if($('kBoard')) $('kBoard').style.display = 'none'; if($('kExec')) $('kExec').style.display = 'block';
+};
+window.fEx = () => { if($('kExec')) $('kExec').style.display = 'none'; if($('kBoard')) $('kBoard').style.display = 'flex'; imgB64=''; };
+
+if($('cam')) {
+    $('cam').onchange = e => {
+        let f = e.target.files[0]; if(!f) return;
+        let r = new FileReader(); r.onload = ev => {
+            let i = new Image(); i.onload = () => {
+                let cv = document.createElement('canvas'), c = cv.getContext('2d'); cv.width = i.width; cv.height = i.height; c.drawImage(i,0,0);
+                c.font = `bold ${i.width/25}px sans-serif`; c.fillStyle = '#fff'; c.shadowColor = '#000'; c.shadowBlur = 10;
+                let o = dbO.find(x=>x.id==v('exId')); if(o) c.fillText(`NOC | ${o.vei} | ${fD(o.dat)}`, 20, i.height - 40);
+                imgB64 = cv.toDataURL('image/jpeg', 0.8); if($('fPrv')) { $('fPrv').src = imgB64; $('fPrv').style.display = 'block'; }
+            }; i.src = ev.target.result;
+        }; r.readAsDataURL(f);
+    };
+}
+
+if($('fExe')) {
+    $('fExe').onsubmit = async e => {
+        e.preventDefault();
+        try {
+            try{ Swal.fire({title:'Salvando Execução...',allowOutsideClick:!1,didOpen:()=>Swal.showLoading()}); } catch(e){}
+            let id = parseInt(v('exId')), o = dbO.find(x=>x.id==id), on = navigator.onLine, fU = $('fPrv')?$('fPrv').dataset.url||'':'';
+            let loggedUser = ls.getItem('noc_user') || 'Desconhecido';
+            
+            o.sts = v('exSts'); o.ck = [$('ckPnl').checked, $('ckSet').checked, $('ckIgn').checked, $('ckCom').checked, $('ckRsc').checked];
+            o.mov = v('exMov');
+            o.eqI = (o.mov === 'Instalação' || o.mov === 'Manutenção') ? v('eqInst') : '';
+            o.eqR = (o.mov === 'Retirada' || o.mov === 'Manutenção') ? v('eqRet') : '';
+            o.eBy = loggedUser; 
+
+            if(imgB64 && !fU){
+                if(on){
+                    let fd=new FormData();fd.append('file',imgB64);fd.append('upload_preset',UP_PRESET);
+                    try{let r=await fetch(CLOUD_URL,{method:'POST',body:fd});let res=await r.json();o.fotoUrl=res.secure_url; delete o.b64;}catch(err){o.b64=imgB64}
+                }else o.b64=imgB64;
+            }
+            if(on && GAS_URL.includes('/exec')){
+                try{let sd={...o};delete sd.b64;await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:s(sd)});o.sync=1}catch(x){o.sync=0}
+            }else{ o.sync=0; }
+            await lf.setItem('dbO', dbO); fEx(); rExe(); rL(); rCal(); rDsh();
+            try{ Swal.fire({icon:'success',title:o.sync?'Execução Sincronizada!':'Salvo Offline (Pendente)',confirmButtonColor:'#1976d2'}); }catch(e){ alert('Salvo!'); }
+        } catch (err) { alert('Erro: ' + err.message); }
+    };
+}
+
+let dAt=new Date();
+const rCal=()=>{if(!$('calM')) return; let y=dAt.getFullYear(),m=dAt.getMonth(),fd=new Date(y,m,1).getDay(),dm=new Date(y,m+1,0).getDate(),td=new Date().toISOString().split('T')[0],sd=v('bDat'),h='DOM SEG TER QUA QUI SEX SAB'.split(' ').map(d=>`<div class="cDh">${d}</div>`).join('');let mx=new Date(y,m,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});$('calM').innerText=`${mx.charAt(0).toUpperCase()+mx.slice(1)}`;for(let i=0;i<fd;i++)h+=`<div></div>`;for(let i=1;i<=dm;i++){let dt=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`,ev=dbO.filter(o=>o.dat===dt),eH=ev.map(o=>`<div class="cE ${o.sts=="Concluído"?"co":(o.sts=="Em Andamento"?"an":"ag")}"><i class="ph ph-clock"></i> ${o.hor} - ${o.cli.split(' ')[0]}</div>`).join('');h+=`<div class="cD ${dt===td?'td':''} ${dt===sd?'sl':''}" onclick="$('bDat').value='${dt}';rL();rCal()"><div class="cDn">${i}</div>${eH}</div>`}$('cGrid').innerHTML=h};
+const cMes=d=>{dAt.setMonth(dAt.getMonth()+d);rCal()};
+if($('bTxt')) $('bTxt').oninput=()=>rL(); const lFlt=()=>{if($('bTxt'))$('bTxt').value=''; if($('bDat'))$('bDat').value=''; rL();rCal()};
+
+window.gPDF = id => {
+    let o = dbO.find(x=>x.id==id), c = dbC.find(x=>x.nome==o.cli) || {}; let ck = o.ck || [true,true,true,true,false];
+    if($('pArea')) {
+        let eqHtml = o.mov ? `<div class="p-box" style="margin-bottom:20px"><h4>Equipamentos (${o.mov})</h4><p style="font-weight:normal; font-size:14px">${o.eqI ? `<b>Instalado:</b> ${o.eqI} <br>` : ''}${o.eqR ? `<b>Retirado:</b> ${o.eqR}` : ''}</p></div>` : '';
+        $('pArea').innerHTML = `
+            <div class="print-hdr"><div><h1>ORDEM DE SERVIÇO</h1><p>#${o.id.toString().slice(-6)} | NOC Telemetria</p></div><div><p><b>Data:</b> ${fD(o.dat)} às ${o.hor}</p><p><b>Status:</b> ${o.sts}</p></div></div>
+            <div class="p-grid"><div class="p-box"><h4>Dados do Cliente</h4><p>${o.cli}</p><p style="font-size:12px; font-weight:normal">${c.doc||''}<br>${c.end||''}<br>${c.tel||''}</p></div><div class="p-box"><h4>Dados do Veículo / Local</h4><p>Veículo / Placa: ${o.vei}</p><p style="font-size:12px; font-weight:normal">${o.end||'Local não informado'}<br>GPS: ${o.gps||'N/A'}</p></div></div>
+            ${eqHtml}
+            <div class="p-box" style="margin-bottom:20px"><h4>Checklist de Vistoria / Qualidade do Veículo</h4>
+                <div class="p-chk"><span>[${ck[0]?'X':' '}] Painel Intacto</span><span>[${ck[1]?'X':' '}] Setas/Faróis OK</span><span>[${ck[2]?'X':' '}] Ignição OK</span><span>[${ck[3]?'X':' '}] Comunicando</span><span style="color:${ck[4]?'red':'#000'}">[${ck[4]?'X':' '}] Possui Avarias</span></div>
+            </div>
+            <div class="p-box" style="margin-bottom:20px"><h4>Serviço Solicitado</h4><p style="font-weight:normal; white-space:pre-wrap">${o.dsc}</p></div>
+            <div class="p-grid" style="margin-bottom:20px"><div class="p-box"><h4>Pagamento</h4><p>${o.pag?'Pago':'Pendente'} - ${fM(o.val)}</p></div></div>
+            <p style="font-size:11px; color:#666; margin-top:10px; border-top:1px dashed #ccc; padding-top:10px;">Auditoria: Registado por <b>${o.cBy||'N/A'}</b> | Executado por <b>${o.eBy||'N/A'}</b></p>
+            ${o.fotoUrl ? `<div style="page-break-inside: avoid; text-align:center"><h4 style="font-size:12px; color:#666">EVIDÊNCIA FOTOGRÁFICA</h4><img src="${o.fotoUrl}" class="p-img"></div>` : ''}
+        `; window.print();
+    }
+};
+
+window.gPOS = () => {
+    let mapa = v('gps') ? 'https://maps.google.com/?q=' + v('gps').replace(/ /g, '') : 'Não informado';
+    let t = `*⚙️ PRÉ-O.S*\n*🏢 Cliente:* ${v('cli')}\n*🚚 Veículo:* ${v('vei')}\n*📅 Data:* ${fD(v('dat'))} às ${v('hor')}\n*📍 Endereço:* ${v('end')}\n*🗺️ GPS:* ${v('gps')}\n*🔗 Mapa:* ${mapa}\n*🔧 Serviços:* ${v('dsc')}`;
+    navigator.clipboard.writeText(t).then(() => { try { Swal.fire('Copiado!', 'Cole no WhatsApp', 'success'); } catch(e) { alert('Copiado!'); } }).catch(() => { try { Swal.fire('Copie:', t, 'info'); } catch(e) { alert('Erro ao copiar'); } });
+};
+
+// FINANCEIRO COM FILTRO AVANÇADO
+window.rFin = () => {
+    if (!$('tRec')) return;
+    let m = v('fMes');
+    let cliF = v('fCliFiltro') ? v('fCliFiltro').toLowerCase() : '';
+    
+    let f = dbO.filter(o => {
+        let pM = m ? o.dat.startsWith(m) : true;
+        let pC = cliF ? o.cli.toLowerCase().includes(cliF) : true;
+        return pM && pC;
+    });
+
+    let rc = 0, pn = 0;
+    f.map(o => o.pag ? rc += o.val : pn += o.val);
+    $('tRec').innerText = fM(rc); $('tPen').innerText = fM(pn); $('tTot').innerText = fM(rc + pn);
+
+    let l = $('lFin');
+    l.innerHTML = f.length ? '' : '<div style="text-align:center;padding:40px;color:#aaa">Sem dados</div>';
+    
+    f.sort((a,b) => b.dat.localeCompare(a.dat)).map(o => {
+        l.innerHTML += `<div class="osi" style="--stc:${o.pag ? '#2ecc71' : '#f39c12'}"><div class="oi"><h4><i class="ph ph-hash"></i>${o.id.toString().slice(-6)} - ${o.cli}</h4><p><i class="ph ph-calendar-blank"></i> ${fD(o.dat)} | ${o.sts}</p></div><div class="osa"><span class="osv">${fM(o.val)}</span><button class="btn bo" style="padding:6px 12px;color:${o.pag ? '#2ecc71' : '#f39c12'};border-color:${o.pag ? '#2ecc71' : '#f39c12'}" onclick="tPag(${o.id})">${o.pag ? '<i class="ph ph-check-circle"></i> PAGO' : '<i class="ph ph-clock"></i> PENDENTE'}</button></div></div>`;
+    });
+};
+window.tPag = async id => { let o=dbO.find(x=>x.id==id); o.pag=o.pag?0:1; await lf.setItem('dbO', dbO); rFin(); rL(); };
+
+const aDl=()=>{if(!$('lCli')) return; $('lCli').innerHTML='';dbC.sort((a,b)=>a.nome.localeCompare(b.nome)).map(c=>$('lCli').innerHTML+=`<option value="${c.nome}">`)};
+
+// ===== GESTÃO DE CLIENTES E EXTRATO FINANCEIRO ===== //
+const rCli=()=>{
+    if(!$('lCliRnd')) return; let l=$('lCliRnd'),tx=v('bCliTxt').toLowerCase(),f=dbC.filter(c=>c.nome.toLowerCase().includes(tx)||c.tel?.includes(tx)||c.doc?.includes(tx)||c.ema?.toLowerCase().includes(tx));
+    l.innerHTML=f.length?'':'<div style="text-align:center;padding:40px;color:#aaa">Vazio</div>';
+    f.map(c=>{
+        let osC = dbO.filter(o=>o.cli===c.nome); let tot=0, pg=0, pn=0; osC.forEach(o=>{tot+=o.val; if(o.pag)pg+=o.val; else pn+=o.val;});
+        l.innerHTML+=`<div class="osi" style="padding:20px;flex-direction:column;align-items:flex-start">
+            <div style="width:100%;display:flex;justify-content:space-between">
+                <div class="oi"><h4 style="margin:0"><i class="ph ph-buildings"></i> ${c.nome}</h4>${c.doc?`<span style="font-size:12px;color:var(--m);display:block;margin-top:4px"><i class="ph ph-identification-card"></i> ${c.doc}</span>`:''}</div>
+                <div class="ig">
+                    <button class="btn bo" style="padding:6px 12px; color:var(--p); border-color:var(--p)" onclick="vExt('${c.nome}')" title="Ver Histórico Financeiro"><i class="ph ph-receipt"></i> Extrato</button>
+                    <button class="btn bo" style="padding:6px 12px" onclick="edCli(${c.id})"><i class="ph ph-pencil"></i></button>
+                    <button class="btn bo" style="padding:6px 12px;color:#e74c3c" onclick="exCli(${c.id})"><i class="ph ph-trash"></i></button>
+                </div>
+            </div>
+            <div style="display:flex; gap:15px; margin-top:15px; padding:12px; background:var(--bg); width:100%; border-radius:8px; border:1px solid var(--b)">
+                <span style="font-size:12px; font-weight:bold; color:var(--s); flex:1"><i class="ph ph-sigma"></i> Faturado: <br>${fM(tot)}</span>
+                <span style="font-size:12px; font-weight:bold; color:#2ecc71; flex:1"><i class="ph ph-check-circle"></i> Pago: <br>${fM(pg)}</span>
+                <span style="font-size:12px; font-weight:bold; color:#e74c3c; flex:1"><i class="ph ph-clock"></i> Pendente: <br>${fM(pn)}</span>
+            </div>
+            <div style="display:flex;gap:15px;flex-wrap:wrap;margin-top:12px;width:100%;">${c.tel?`<span style="font-size:12px;display:flex;gap:5px"><i class="ph ph-phone"></i> ${c.tel}</span>`:''}${c.ema?`<span style="font-size:12px;display:flex;gap:5px"><i class="ph ph-envelope"></i> ${c.ema}</span>`:''}${c.res?`<span style="font-size:12px;display:flex;gap:5px"><i class="ph ph-user"></i> ${c.res}</span>`:''}${c.end?`<span style="font-size:12px;width:100%;display:flex;gap:5px"><i class="ph ph-map-pin"></i> ${c.end}</span>`:''}</div>
+        </div>`;
+    });
+};
+
+window.vExt = (nome) => {
+    let osCli = dbO.filter(o => o.cli === nome).sort((a,b)=>b.id-a.id);
+    let tot = 0, pago = 0, pend = 0;
+    let listHtml = osCli.map(o => {
+        tot += o.val; if(o.pag) pago+=o.val; else pend+=o.val;
+        return `<div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid var(--b); font-size:13px;">
+            <div><b>#${o.id.toString().slice(-6)}</b> | ${fD(o.dat)}<br><span style="color:var(--m)">${o.vei} - ${o.dsc.substring(0,30)}...</span></div>
+            <div style="text-align:right"><b>${fM(o.val)}</b><br><span style="color:${o.pag?'#2ecc71':'#e74c3c'}">${o.pag?'Pago':'Pendente'}</span></div>
+        </div>`;
+    }).join('');
+    if(osCli.length === 0) listHtml = '<p style="text-align:center; padding:20px; color:#aaa">Nenhum serviço registrado.</p>';
+
+    if($('mExtNome')) $('mExtNome').innerText = nome;
+    if($('mExtTot')) $('mExtTot').innerText = fM(tot);
+    if($('mExtPag')) $('mExtPag').innerText = fM(pago);
+    if($('mExtPen')) $('mExtPen').innerText = fM(pend);
+    if($('mExtList')) $('mExtList').innerHTML = listHtml;
+    if($('mExtrato')) $('mExtrato').style.display = 'flex';
+};
+window.fExt = () => { if($('mExtrato')) $('mExtrato').style.display = 'none'; };
+
+window.xCSVCli = () => {
+    let nome = $('mExtNome').innerText;
+    let osCli = dbO.filter(o => o.cli === nome);
+    let d=[['ID','Veiculo','Data','Hora','Status','Pagamento','Valor','Movimentacao','Eq_Instalado','Eq_Retirado']];
+    osCli.forEach(o=>d.push([o.id,o.vei,o.dat,o.hor,o.sts,o.pag?'Pago':'Pendente',o.val,o.mov||'',o.eqI||'',o.eqR||'']));
+    let c = d.map(r => r.map(v => `"${v||''}"`).join(';')).join('\n');
+    let a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,%EF%BB%BF' + encodeURIComponent(c); a.download = `Historico_${nome}.csv`; a.click();
+};
+// =================================================== //
+
+if($('fCli')) {
+    $('fCli').onsubmit = async e => {
+        e.preventDefault();let id=v('cId'),o={nome:v('cNom').trim(),tel:v('cTel').trim(),doc:v('cDoc').trim(),ema:v('cEma').trim(),res:v('cRes').trim(),end:v('cEnd').trim()};id?dbC[dbC.findIndex(x=>x.id==id)]={...dbC.find(x=>x.id==id),...o}:(o.id=Date.now(),dbC.push(o));cCEd();await lf.setItem('dbC', dbC);aDl();rCli();tst.fire({icon:'success',title:'Salvo!'});
+    };
+}
+window.edCli=id=>{let c=dbC.find(x=>x.id==id);['cId','cNom','cDoc','cTel','cEma','cRes','cEnd'].map(k=>{if($(k))$(k).value=c[k.replace('c','').toLowerCase()]||(k=='cId'?id:'')});if($('bCSal'))$('bCSal').innerHTML="Atualizar";if($('bCCan'))$('bCCan').style.display="block";window.scrollTo(0,0)};
+window.cCEd=()=>{if($('fCli'))$('fCli').reset();if($('cId'))$('cId').value="";if($('bCSal'))$('bCSal').innerHTML="<i class='ph ph-plus'></i> Salvar";if($('bCCan'))$('bCCan').style.display="none"};
+window.exCli = async id => { try{Swal.fire({title:'Excluir?',icon:'warning',showCancelButton:!0,confirmButtonColor:'#d33'}).then(async r=>{if(r.isConfirmed){dbC=dbC.filter(c=>c.id!==id);await lf.setItem('dbC',dbC);rCli();aDl()}})}catch(e){if(confirm("Excluir?")){dbC=dbC.filter(c=>c.id!==id);lf.setItem('dbC',dbC).then(()=>{rCli();aDl();})}}};
+if($('bCliTxt')) $('bCliTxt').oninput=rCli;
+
+const rC=()=>{if(!$('rCat')) return; let h='<option value="">-- Selecione --</option>';$('rCat').innerHTML='';dbCat.map(i=>{h+=`<option value="${i.id}">${i.nome} - ${fM(i.valor)}</option>`;$('rCat').innerHTML+=`<div class="cat"><span><i class="ph ph-check-circle" style="color:var(--p)"></i> ${i.nome} (${fM(i.valor)})</span><button class="btn bo" style="padding:6px 12px" onclick="rmC(${i.id})"><i class="ph ph-trash" style="color:#e74c3c"></i></button></div>`});if($('sCat'))$('sCat').innerHTML=h};
+window.aCat=()=>{let i=dbCat.find(x=>x.id==v('sCat'));if(i){if($('dsc'))$('dsc').value+=(v('dsc')?"\n":"")+"- "+i.nome;if($('val'))$('val').value=(parseFloat(v('val'))||0)+i.valor;if($('sCat'))$('sCat').value="";tst.fire({icon:'success',title:'Add!'})}};
+if($('fCat')) {
+    $('fCat').onsubmit = async e => { e.preventDefault();dbCat.push({id:Date.now(),nome:v('nCat'),valor:parseFloat(v('vCat'))});await lf.setItem('dbCat', dbCat);e.target.reset();rC();tst.fire({icon:'success',title:'Salvo'})};
+}
+window.rmC = async id => { dbCat=dbCat.filter(i=>i.id!==id);await lf.setItem('dbCat', dbCat);rC() };
+window.rCatP=()=>{try{Swal.fire({title:'Restaurar?',icon:'warning',showCancelButton:!0}).then(async r=>{if(r.isConfirmed){dbCat=[...cP];await lf.setItem('dbCat', dbCat);rC()}})}catch(e){if(confirm('Restaurar?')){dbCat=[...cP];lf.setItem('dbCat', dbCat).then(()=>rC())}}};
+window.aF=()=>{let c=dbC.find(x=>x.nome===v('cli').trim());if(c&&c.end){if($('end'))$('end').value=c.end;bGPS()}};
+window.bGPS=async()=>{let e=v('end');if(!e)return;if($('gps'))$('gps').value='Buscando...';try{let r=await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(e)),d=await r.json();if(d.length){if($('gps'))$('gps').value=d[0].lat+','+d[0].lon;tst.fire({icon:'success',title:'GPS Encontrado!'})}else{if($('gps'))$('gps').value='';tst.fire({icon:'error',title:'Endereço não localizado'})}}catch(x){if($('gps'))$('gps').value=''}};
+window.cGPS=()=>{if(!navigator.geolocation)return; navigator.geolocation.getCurrentPosition(p=>{if($('gps'))$('gps').value=`${p.coords.latitude},${p.coords.longitude}`;tst.fire({icon:'success',title:'GPS OK'})},e=>{try{Swal.fire('Erro','GPS Negado','error')}catch(ex){alert('GPS Negado')}})};
+window.oMap=()=>{v('gps')?window.open('https://maps.google.com/?q='+v('gps').replace(/ /g,''),'_blank'):tst.fire({icon:'error',title:'Preencha o GPS primeiro!'})};
+
+window.edO=id=>{let o=dbO.find(x=>x.id==id);['eId','cli','vei','dat','hor','end','gps','dsc','sts','pag','val'].map(k=>{if($(k))$(k).value=o[k]||(k=='pag'?0:(k=='eId'?id:''))});if($('fTit'))$('fTit').innerHTML=`<i class="ph ph-pencil"></i> Editar Agendamento #${id.toString().slice(-6)}`;if($('bSal'))$('bSal').innerHTML=`<i class="ph ph-floppy-disk"></i> ATUALIZAR`;if($('bCan'))$('bCan').style.display="block";sv('v-os',$$('.ni')[2]);window.scrollTo(0,0)};
+window.cEd=()=>{let d=new Date();if($('fOs'))$('fOs').reset();if($('eId'))$('eId').value="";if($('fTit'))$('fTit').innerHTML="Cadastrar Novo Serviço";if($('bSal'))$('bSal').innerHTML=`<i class="ph ph-cloud-arrow-up"></i> CADASTRAR O.S`;if($('bCan'))$('bCan').style.display="none";if($('dat'))$('dat').value=d.toISOString().split('T')[0];if($('hor'))$('hor').value=d.toTimeString().slice(0,5);if($('sts'))$('sts').value="Agendado";if($('pag'))$('pag').value="0";};
+window.exO = async id => { try{Swal.fire({title:'Excluir?',icon:'warning',showCancelButton:!0,confirmButtonColor:'#d33'}).then(async r=>{if(r.isConfirmed){dbO=dbO.filter(o=>o.id!==id);await lf.setItem('dbO', dbO);rL();rCal();rFin();rDsh();rExe()}})}catch(e){if(confirm("Excluir?")){dbO=dbO.filter(o=>o.id!==id);lf.setItem('dbO', dbO).then(()=>{rL();rCal();rFin();rDsh();rExe()})}}};
+
+const rL=()=>{
+    if(!$('lOs')) return;
+    let l=$('lOs'), tx=v('bTxt').toLowerCase(), dt=v('bDat'), t=0;
+    
+    let list = [...dbO];
+    if(window.usrLat && window.usrLon) {
+        list.forEach(o => {
+            if(o.gps) { let pts = o.gps.split(','); if(pts.length==2) o._d = getDist(window.usrLat, window.usrLon, parseFloat(pts[0]), parseFloat(pts[1])); else o._d = 99999; } else o._d = 99999;
+        });
+        list.sort((a,b) => a._d - b._d);
+    } else { list.sort((a,b)=>b.id-a.id); }
+
+    let f=list.filter(o=>(o.cli.toLowerCase().includes(tx)||o.id.toString().includes(tx)||o.vei.toLowerCase().includes(tx))&&(dt?o.dat===dt:!0));
+    l.innerHTML=f.length?'':'<div style="text-align:center;padding:40px;color:#aaa">Nenhuma O.S.</div>';
+    f.map(o=>{
+        t+=o.val;
+        let s=o.sts, bC=s=="Concluído"?"con":(s=="Em Andamento"?"and":"");
+        let distHtml = o._d && o._d !== 99999 ? `<span style="font-size:11px; background:#e3f2fd; color:#1976d2; padding:2px 6px; border-radius:4px; margin-left:10px;"><i class="ph ph-navigation-arrow"></i> ${o._d.toFixed(1)} km</span>` : '';
+        
+        l.innerHTML+=`
+        <div class="osi" style="--stc:${s=='Concluído'?'#2ecc71':(s=='Em Andamento'?'#f39c12':'var(--b)')}">
+            <div class="oi">
+                <h4>${o.sync?'<i class="ph ph-cloud-check" style="color:#2ecc71" title="Sincronizado"></i>':'<i class="ph ph-cloud-slash" style="color:#e74c3c" title="Pendente"></i>'} #${o.id.toString().slice(-6)} - ${o.cli}</h4>
+                <p><i class="ph ph-truck"></i> ${o.vei} | <i class="ph ph-calendar-blank"></i> ${fD(o.dat)} às ${o.hor} ${distHtml}</p>
+                <p><i class="ph ph-wrench"></i> ${o.dsc.substring(0,40)}...</p>
+                <p style="font-size:11px; color:#aaa; margin-top:6px"><i class="ph ph-user"></i> Criado por: ${o.cBy||'N/A'} ${o.eBy ? `| Executado por: ${o.eBy}` : ''}</p>
+                <span class="bdg ${bC}">${s}</span>
+                <button class="btn bo" style="padding:2px 8px; font-size:10px; border:none; color:var(--a); margin-left:5px" onclick="hPlc('${o.vei}')"><i class="ph ph-clock-counter-clockwise"></i> Histórico Placa</button>
+            </div>
+            <div class="osa">
+                <span class="osv">${fM(o.val)}</span>
+                <div class="ig">
+                    <button class="btn bo" style="padding:6px 12px; color:#333; border-color:#333" title="Gerar PDF" onclick="gPDF(${o.id})"><i class="ph ph-printer"></i></button>
+                    <button class="btn bo" style="padding:6px 12px" title="Editar Info Base" onclick="edO(${o.id})"><i class="ph ph-pencil"></i></button>
+                    <button class="btn bo" style="padding:6px 12px;color:#e74c3c" title="Excluir" onclick="exO(${o.id})"><i class="ph ph-trash"></i></button>
+                </div>
+            </div>
+        </div>`;
+    });
+    if($('tFat'))$('tFat').innerText=`Fat: ${fM(t)}`;
+};
+
+window.xCSV = t => {
+    let d, n;
+    if(t=='o'){ d=[['ID','Cliente','Veiculo','Data','Hora','Endereco','GPS','Status','Pagamento','Valor','Movimentacao','Eq_Instalado','Eq_Retirado','Criado_Por','Executado_Por']]; dbO.map(o=>d.push([o.id,o.cli,o.vei,o.dat,o.hor,o.end,o.gps,o.sts,o.pag?'Pago':'Pendente',o.val,o.mov||'',o.eqI||'',o.eqR||'',o.cBy||'',o.eBy||''])); n='OS_Financeiro.csv'; }
+    if(t=='c'){ d=[['Nome','CNPJ/CPF','Telefone','Email','Contato','Endereco']]; dbC.map(c=>d.push([c.nome,c.doc,c.tel,c.ema,c.res,c.end])); n='Clientes.csv'; }
+    if(t=='k'){ d=[['Servico','Valor']]; dbCat.map(c=>d.push([c.nome,c.valor])); n='Catalogo.csv'; }
+    let c = d.map(r => r.map(v => `"${v||''}"`).join(';')).join('\n');
+    let a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,%EF%BB%BF' + encodeURIComponent(c);
+    a.download = n;
+    a.click();
+};
+</script></body></html>
