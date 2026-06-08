@@ -73,8 +73,8 @@ input[type="checkbox"]{width:auto; transform:scale(1.2); margin-right:8px; curso
 
 <div id="v-login">
     <div class="l-box">
-        <h2 style="color:var(--p);font-size:24px;margin-bottom:5px;display:flex;align-items:center;justify-content:center;gap:10px"><i class="ph-fill ph-crosshair"></i> SISTEMA R-TECH</h2>
-        <p style="color:var(--m);font-size:14px;text-align:center;margin-bottom:30px">Acesso ao Sistema</p>
+        <h2 style="color:var(--p);font-size:24px;margin-bottom:5px;display:flex;align-items:center;justify-content:center;gap:10px"><i class="ph-fill ph-crosshair"></i> NOC Telemetria</h2>
+        <p style="color:var(--m);font-size:14px;text-align:center;margin-bottom:30px">Acesso ao Sistema Corporativo</p>
         <form id="fLog" onsubmit="event.preventDefault(); window.fazerLogin();">
             <div class="fg" style="margin-bottom:15px"><label>Usuário ou E-mail</label><input type="text" id="lUser" placeholder="Ex: admin" required autocomplete="off"></div>
             <div class="fg" style="margin-bottom:25px"><label>Senha de Acesso</label><input type="password" id="lPass" placeholder="••••••" required></div>
@@ -84,7 +84,7 @@ input[type="checkbox"]{width:auto; transform:scale(1.2); margin-right:8px; curso
 </div>
 
 <aside class="sb">
-    <h2><i class="ph-fill ph-crosshair"></i> R-Tech</h2>
+    <h2><i class="ph-fill ph-crosshair"></i> NOC</h2>
     <nav class="nav">
         <div class="ni act" onclick="sv('v-dsh',this)"><i class="ph ph-squares-four"></i> Dashboard</div>
         <div class="ni" onclick="sv('v-exe',this)"><i class="ph ph-kanban"></i> Execução (Status)</div>
@@ -160,15 +160,12 @@ input[type="checkbox"]{width:auto; transform:scale(1.2); margin-right:8px; curso
     </div>
 </section>
 
-<!-- NOVA O.S -->
 <section id="v-os" class="vw"><div class="hdr"><h1>Cadastrar Novo Serviço</h1></div><div class="crd"><form id="fOs"><input type="hidden" id="eId"><div class="fr"><div class="fg" style="flex:2"><label>Cliente</label><input type="text" id="cli" list="lCli" required autocomplete="off" oninput="aF()"><datalist id="lCli"></datalist></div><div class="fg"><label>Veículo / Placa</label><input type="text" id="vei" style="text-transform:uppercase" required></div></div><div class="fr"><div class="fg"><label>Data</label><input type="date" id="dat" required></div><div class="fg"><label>Horário</label><input type="time" id="hor" required></div></div><div class="fr"><div class="fg" style="flex:2"><label>Endereço</label><input type="text" id="end" onblur="bGPS()" placeholder="Digite o endereço e clique fora para buscar o GPS..."></div><div class="fg"><label>GPS</label><div class="ig"><input type="text" id="gps" placeholder="-8.05,-34.88"><button type="button" class="bi" onclick="cGPS()" title="Meu Local"><i class="ph ph-crosshair"></i></button><button type="button" class="bi" onclick="oMap()" title="Ver no Mapa"><i class="ph ph-map-trifold"></i></button></div></div></div>
 <div class="fr"><div class="fg" style="flex:2;background:var(--bg);padding:15px;border-radius:var(--r);border:1px dashed var(--b)"><label><i class="ph ph-lightning"></i> Catálogo Rápido</label><select id="sCat" onchange="aCat()"></select></div></div>
 <div class="fg" style="margin-bottom:15px"><label>Descrição Completa</label><textarea id="dsc" rows="3" required></textarea></div><div class="fr"><div class="fg"><label>Status Inicial</label><select id="sts"><option>Agendado</option><option>Em Andamento</option><option>Concluído</option></select></div><div class="fg"><label>Pagamento</label><select id="pag"><option value="0">Pendente</option><option value="1">Pago</option></select></div><div class="fg"><label>Valor (R$)</label><input type="number" id="val" step="0.01" min="0" required></div></div><div class="ag"><button type="submit" id="bSal" class="btn bp" style="flex:2"><i class="ph ph-cloud-arrow-up"></i> CADASTRAR O.S</button><button type="button" onclick="gPOS()" class="btn ba" style="flex:1"><i class="ph ph-whatsapp-logo"></i> PRÉ-O.S</button></div><button type="button" id="bCan" class="btn bo" style="width:100%;margin-top:10px;display:none" onclick="cEd()">Cancelar Edição</button></form></div></section>
 
-<!-- AGENDA / HISTÓRICO -->
 <section id="v-hst" class="vw"><div class="hdr"><h1>Agenda de O.S</h1><div style="display:flex;gap:10px;align-items:center"><button class="btn bo" style="padding:6px 12px;font-size:12px" onclick="bNuv()"><i class="ph ph-cloud-arrow-down"></i> Consultar Nuvem</button><button class="btn bo" style="padding:6px 12px;font-size:12px" onclick="sNuv()"><i class="ph ph-arrows-clockwise"></i> Sincronizar</button></div></div><div class="crd" style="padding:15px"><div class="hdr" style="margin-bottom:15px;justify-content:center;gap:20px"><button class="btn bo" style="padding:5px 15px" onclick="cMes(-1)"><i class="ph ph-caret-left"></i></button><h3 id="calM" style="color:var(--s);font-size:16px;text-transform:uppercase;margin:0">Mês</h3><button class="btn bo" style="padding:5px 15px" onclick="cMes(1)"><i class="ph ph-caret-right"></i></button></div><div style="overflow-x:auto;padding-bottom:5px"><div id="cGrid" class="cG" style="min-width:650px"></div></div></div><div class="sbar"><div class="ig" style="flex:3"><button class="bi" style="border:0"><i class="ph ph-magnifying-glass"></i></button><input type="text" id="bTxt" placeholder="Buscar por cliente, placa ou id..." style="border:0;background:0 0"></div><input type="date" id="bDat" style="flex:1;display:none"><button class="btn bo" style="padding:10px" onclick="lFlt()" title="Mostrar Tudo"><i class="ph ph-x"></i> Tudo</button></div><div id="lOs"></div></section>
 
-<!-- FINANCEIRO COM FILTRO DE CLIENTES -->
 <section id="v-fin" class="vw">
     <div class="hdr"><h1>Gestão Financeira</h1><button class="btn bo" style="padding:6px 12px;font-size:12px" onclick="xCSV('o')"><i class="ph ph-download-simple"></i> Extrair Excel</button></div>
     <div class="kG">
@@ -189,7 +186,6 @@ input[type="checkbox"]{width:auto; transform:scale(1.2); margin-right:8px; curso
     <div id="lFin"></div>
 </section>
 
-<!-- CLIENTES (AGORA COM VISÃO DE EXTRATO FINANCEIRO) -->
 <section id="v-cli" class="vw"><div class="hdr"><h1>Clientes e Histórico</h1><button class="btn bo" style="padding:6px 12px;font-size:12px" onclick="xCSV('c')"><i class="ph ph-download-simple"></i> Extrair Tabela Clientes</button></div><div class="crd"><form id="fCli"><input type="hidden" id="cId"><div class="fr"><div class="fg" style="flex:2"><label>Nome</label><input type="text" id="cNom" required autocomplete="off"></div><div class="fg"><label>CNPJ/CPF</label><input type="text" id="cDoc" autocomplete="off"></div></div><div class="fr"><div class="fg"><label>Tel</label><input type="text" id="cTel" autocomplete="off"></div><div class="fg"><label>E-mail</label><input type="email" id="cEma" autocomplete="off"></div><div class="fg"><label>Contato</label><input type="text" id="cRes" autocomplete="off"></div></div><div class="fr"><div class="fg" style="flex:3"><label>Endereço</label><input type="text" id="cEnd" autocomplete="off"></div><div class="ig" style="align-items:flex-end;flex:1"><button type="submit" id="bCSal" class="btn bp" style="width:100%"><i class="ph ph-plus"></i> Salvar</button><button type="button" id="bCCan" class="btn bo" style="display:none" onclick="cCEd()"><i class="ph ph-x"></i></button></div></div></form></div><div class="sbar"><div class="ig" style="width:100%"><button class="bi" style="border:0"><i class="ph ph-magnifying-glass"></i></button><input type="text" id="bCliTxt" placeholder="Pesquisar..." style="border:0;background:0 0;flex:1"></div></div><div id="lCliRnd"></div></section>
 
 <section id="v-cat" class="vw"><div class="hdr"><h1>Catálogo</h1><button class="btn bo" style="padding:6px 12px;font-size:12px" onclick="xCSV('k')"><i class="ph ph-download-simple"></i> Extrair Excel</button></div><div class="crd"><form id="fCat" class="fr" style="align-items:flex-end"><div class="fg" style="flex:2"><label>Nome</label><input type="text" id="nCat" required></div><div class="fg"><label>Valor (R$)</label><input type="number" id="vCat" step="0.01" min="0" required></div><button type="submit" class="btn bp"><i class="ph ph-plus"></i></button></form><div id="rCat" style="margin-top:20px"></div><button class="btn bo" onclick="rCatP()" style="margin:25px auto 0"><i class="ph ph-arrows-counter-clockwise"></i> Padrão</button></div></section>
@@ -213,7 +209,6 @@ input[type="checkbox"]{width:auto; transform:scale(1.2); margin-right:8px; curso
     <div id="lUsrRnd"></div>
 </section>
 
-<!-- MODAL DE EXTRATO DO CLIENTE -->
 <div id="mExtrato" class="mod-bg">
     <div class="mod-box">
         <div class="hdr" style="margin-bottom:15px"><h2 id="mExtNome" style="color:var(--s); font-size:18px">Cliente</h2><button class="btn bo" style="padding:5px 10px" onclick="fExt()"><i class="ph ph-x"></i></button></div>
@@ -275,7 +270,7 @@ window.onload = async () => {
     dbU = (await lf.getItem('dbU')) || [];
 
     let admIdx = dbU.findIndex(u => u && u.user === 'admin');
-    if (admIdx !== -1) { dbU[admIdx].pass = 'El123!@#'; } else { dbU.push({id: 1, user: 'admin', pass: 'El123!@#', nome: 'Administrador'}); }
+    if (admIdx !== -1) { dbU[admIdx].pass = 'El123!@#'; } else { dbU.push({id: 1, user: 'admin', pass: 'El123!@#', nome: 'Administrador', sync: 0}); }
     await lf.setItem('dbU', dbU);
 
     if(ls.getItem('noc_auth') !== '1') { $('v-login').style.display = 'flex'; } else { $('v-login').style.display = 'none'; iniciarApp(); }
@@ -317,31 +312,55 @@ window.bNuv = async () => {
     try { Swal.fire({title:'Consultando Planilha...', text:'Transferindo dados da nuvem...', allowOutsideClick:!1, didOpen:()=>Swal.showLoading()}); } catch(e){}
     try {
         let r = await fetch(GAS_URL), cData = await r.json(); if(cData.error) throw new Error(cData.error);
-        let lUns = dbO.filter(o => o.sync === 0), merged = [...cData];
+        
+        let lUns = dbO.filter(o => o.sync === 0);
+        let merged = [...(cData.os || [])];
         lUns.forEach(lu => { let idx = merged.findIndex(c => c.id == lu.id); if(idx !== -1) merged[idx] = lu; else merged.push(lu); });
         dbO = merged; await lf.setItem('dbO', dbO);
+
+        let lUnsU = dbU.filter(u => u.sync === 0);
+        let mergedU = [...(cData.usr || [])];
+        lUnsU.forEach(lu => { let idx = mergedU.findIndex(c => c.id == lu.id); if(idx !== -1) mergedU[idx] = lu; else mergedU.push(lu); });
+        dbU = mergedU; 
+        let admIdx = dbU.findIndex(u => u && u.user === 'admin');
+        if (admIdx === -1) { dbU.push({id: 1, user: 'admin', pass: 'El123!@#', nome: 'Administrador', sync:0}); }
+        await lf.setItem('dbU', dbU);
+        
         dbO.forEach(o => { if(o.cli && !dbC.find(c=>c.nome===o.cli)){ dbC.push({id:Date.now()+Math.random(), nome:o.cli, tel:'', doc:'', ema:'', res:'', end:o.end||''}); }});
-        await lf.setItem('dbC', dbC); aDl(); rCli(); rL(); rCal(); rFin(); rDsh(); rExe();
-        try{ Swal.fire('Sincronizado!', `${cData.length} ordens de serviço consultadas com sucesso.`, 'success'); } catch(e){ alert('Sucesso!'); }
+        await lf.setItem('dbC', dbC); aDl(); rCli(); rUsr(); rL(); rCal(); rFin(); rDsh(); rExe();
+        try{ Swal.fire('Sincronizado!', `${cData.os?cData.os.length:0} ordens consultadas com sucesso.`, 'success'); } catch(e){ alert('Sucesso!'); }
     } catch(e) { try{ Swal.fire('Erro', 'Falha ao buscar os dados da planilha.', 'error'); } catch(ex){ alert('Erro de sincronização'); } }
 };
 
 window.sNuv = async () => {
     if(!navigator.onLine) { try{Swal.fire('Offline','Sem internet.','warning')}catch(e){alert('Offline')} return; }
-    let pd=dbO.filter(o=>!o.sync); if(!pd.length) { tst.fire({icon:'info',title:'Tudo sincronizado!'}); return; }
-    try{Swal.fire({title:'Sincronizando...',text:`Enviando ${pd.length} O.S`,allowOutsideClick:!1,didOpen:()=>Swal.showLoading()})}catch(e){}
+    let pd = dbO.filter(o=>!o.sync); 
+    let pdU = dbU.filter(u=>!u.sync);
+    if(!pd.length && !pdU.length) { tst.fire({icon:'info',title:'Tudo sincronizado!'}); return; }
+    try{Swal.fire({title:'Sincronizando...',text:'Enviando dados...',allowOutsideClick:!1,didOpen:()=>Swal.showLoading()})}catch(e){}
     let sc=0;
+    
+    // Sincroniza OS
     for(let o of pd){
         try{
             if(o.b64 && !o.fotoUrl){
                 let fd=new FormData();fd.append('file',o.b64);fd.append('upload_preset',UP_PRESET);
                 let r=await fetch(CLOUD_URL,{method:'POST',body:fd});let res=await r.json();o.fotoUrl=res.secure_url;delete o.b64;
             }
-            let sd={...o};delete sd.b64;await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:s(sd)}); o.sync=1;sc++;
+            let sd={...o, type:'os'};delete sd.b64;await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:s(sd)}); o.sync=1;sc++;
         }catch(e){}
     }
-    await lf.setItem('dbO', dbO); rL(); rCal(); rFin(); rExe(); 
-    try{Swal.fire('Concluído',`${sc} de ${pd.length} enviadas!`,sc==pd.length?'success':'warning')}catch(e){alert('Sincronizado')}
+    
+    // Sincroniza Usuários
+    for(let u of pdU){
+        try{
+            let sd={...u, type:'user'}; await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:s(sd)}); u.sync=1; sc++;
+        }catch(e){}
+    }
+
+    await lf.setItem('dbO', dbO); await lf.setItem('dbU', dbU); 
+    rL(); rCal(); rFin(); rExe(); 
+    try{Swal.fire('Concluído',`${sc} itens sincronizados!`,sc==(pd.length+pdU.length)?'success':'warning')}catch(e){alert('Sincronizado')}
 };
 
 window.optMem = async (silent = false) => {
@@ -376,7 +395,7 @@ window.navMaps = () => {
 
 if($('fUsr')) {
     $('fUsr').onsubmit = async e => {
-        e.preventDefault(); let id = v('uId'), o = {nome: v('uNom').trim(), user: v('uUser').trim().toLowerCase(), pass: v('uPass')};
+        e.preventDefault(); let id = v('uId'), o = {nome: v('uNom').trim(), user: v('uUser').trim().toLowerCase(), pass: v('uPass'), sync:0};
         if(id) { let idx = dbU.findIndex(x => x.id == id); if(idx !== -1) dbU[idx] = {...dbU[idx], ...o}; } else { o.id = Date.now(); dbU.push(o); }
         await lf.setItem('dbU', dbU); cUEd(); rUsr(); tst.fire({icon:'success', title:'Utilizador salvo!'});
     };
@@ -392,9 +411,9 @@ window.exUsr = async id => {
     try { Swal.fire({title:'Excluir Utilizador?', icon:'warning', showCancelButton:!0, confirmButtonColor:'#d33'}).then(async r => { if(r.isConfirmed) { dbU = dbU.filter(u => u.id !== id); await lf.setItem('dbU', dbU); rUsr(); } }); } 
     catch(e) { if(confirm("Excluir Utilizador?")) { dbU = dbU.filter(u => u.id !== id); lf.setItem('dbU', dbU).then(()=>rUsr()); } }
 };
-const rUsr = () => {
+window.rUsr = () => {
     if(!$('lUsrRnd')) return; let l = $('lUsrRnd'); l.innerHTML = '';
-    dbU.map(u => { l.innerHTML += `<div class="osi" style="padding:20px; align-items:center;"><div class="oi"><h4><i class="ph ph-user"></i> ${u.nome}</h4><p><i class="ph ph-identification-card"></i> Utilizador: <b>${u.user}</b></p></div><div class="ig"><button class="btn bo" style="padding:6px 12px" onclick="edUsr(${u.id})"><i class="ph ph-pencil"></i></button><button class="btn bo" style="padding:6px 12px;color:#e74c3c" onclick="exUsr(${u.id})"><i class="ph ph-trash"></i></button></div></div>`; });
+    dbU.map(u => { l.innerHTML += `<div class="osi" style="padding:20px; align-items:center;"><div class="oi"><h4>${u.sync?'<i class="ph ph-cloud-check" style="color:#2ecc71"></i>':'<i class="ph ph-cloud-slash" style="color:#e74c3c"></i>'} <i class="ph ph-user"></i> ${u.nome}</h4><p><i class="ph ph-identification-card"></i> Utilizador: <b>${u.user}</b></p></div><div class="ig"><button class="btn bo" style="padding:6px 12px" onclick="edUsr(${u.id})"><i class="ph ph-pencil"></i></button><button class="btn bo" style="padding:6px 12px;color:#e74c3c" onclick="exUsr(${u.id})"><i class="ph ph-trash"></i></button></div></div>`; });
 };
 
 window.chkIn = el => {
@@ -408,7 +427,7 @@ window.chgMov = () => {
     if($('dEqRet')) $('dEqRet').style.display = (m === 'Retirada' || m === 'Manutenção') ? 'flex' : 'none';
 };
 
-const rDsh = () => {
+window.rDsh = () => {
     let m = v('dshMes'), f = dbO.filter(o => m ? o.dat.startsWith(m) : true);
     let co=0, an=0, ag=0; f.forEach(o=>{ if(o.sts=="Concluído")co++; else if(o.sts=="Em Andamento")an++; else if(o.sts=="Agendado")ag++; });
     if($('dCo')) $('dCo').innerText=co; if($('dAn')) $('dAn').innerText=an; if($('dAg')) $('dAg').innerText=ag;
@@ -428,7 +447,7 @@ const rDsh = () => {
     } catch(e) {}
 };
 
-const rExe = () => {
+window.rExe = () => {
     if(!$('kAg')) return; $('kAg').innerHTML=''; $('kAn').innerHTML=''; $('kCo').innerHTML='';
     let list = [...dbO];
     if(window.usrLat && window.usrLon) {
@@ -499,7 +518,7 @@ if($('fExe')) {
                 }else o.b64=imgB64;
             }
             if(on && GAS_URL.includes('/exec')){
-                try{let sd={...o};delete sd.b64;await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:s(sd)});o.sync=1}catch(x){o.sync=0}
+                try{let sd={...o, type:'os'};delete sd.b64;await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:s(sd)});o.sync=1}catch(x){o.sync=0}
             }else{ o.sync=0; }
             await lf.setItem('dbO', dbO); fEx(); rExe(); rL(); rCal(); rDsh();
             try{ Swal.fire({icon:'success',title:o.sync?'Execução Sincronizada!':'Salvo Offline (Pendente)',confirmButtonColor:'#1976d2'}); }catch(e){ alert('Salvo!'); }
@@ -508,9 +527,9 @@ if($('fExe')) {
 }
 
 let dAt=new Date();
-const rCal=()=>{if(!$('calM')) return; let y=dAt.getFullYear(),m=dAt.getMonth(),fd=new Date(y,m,1).getDay(),dm=new Date(y,m+1,0).getDate(),td=new Date().toISOString().split('T')[0],sd=v('bDat'),h='DOM SEG TER QUA QUI SEX SAB'.split(' ').map(d=>`<div class="cDh">${d}</div>`).join('');let mx=new Date(y,m,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});$('calM').innerText=`${mx.charAt(0).toUpperCase()+mx.slice(1)}`;for(let i=0;i<fd;i++)h+=`<div></div>`;for(let i=1;i<=dm;i++){let dt=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`,ev=dbO.filter(o=>o.dat===dt),eH=ev.map(o=>`<div class="cE ${o.sts=="Concluído"?"co":(o.sts=="Em Andamento"?"an":"ag")}"><i class="ph ph-clock"></i> ${o.hor} - ${o.cli.split(' ')[0]}</div>`).join('');h+=`<div class="cD ${dt===td?'td':''} ${dt===sd?'sl':''}" onclick="$('bDat').value='${dt}';rL();rCal()"><div class="cDn">${i}</div>${eH}</div>`}$('cGrid').innerHTML=h};
-const cMes=d=>{dAt.setMonth(dAt.getMonth()+d);rCal()};
-if($('bTxt')) $('bTxt').oninput=()=>rL(); const lFlt=()=>{if($('bTxt'))$('bTxt').value=''; if($('bDat'))$('bDat').value=''; rL();rCal()};
+window.rCal=()=>{if(!$('calM')) return; let y=dAt.getFullYear(),m=dAt.getMonth(),fd=new Date(y,m,1).getDay(),dm=new Date(y,m+1,0).getDate(),td=new Date().toISOString().split('T')[0],sd=v('bDat'),h='DOM SEG TER QUA QUI SEX SAB'.split(' ').map(d=>`<div class="cDh">${d}</div>`).join('');let mx=new Date(y,m,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});$('calM').innerText=`${mx.charAt(0).toUpperCase()+mx.slice(1)}`;for(let i=0;i<fd;i++)h+=`<div></div>`;for(let i=1;i<=dm;i++){let dt=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`,ev=dbO.filter(o=>o.dat===dt),eH=ev.map(o=>`<div class="cE ${o.sts=="Concluído"?"co":(o.sts=="Em Andamento"?"an":"ag")}"><i class="ph ph-clock"></i> ${o.hor} - ${o.cli.split(' ')[0]}</div>`).join('');h+=`<div class="cD ${dt===td?'td':''} ${dt===sd?'sl':''}" onclick="$('bDat').value='${dt}';rL();rCal()"><div class="cDn">${i}</div>${eH}</div>`}$('cGrid').innerHTML=h};
+window.cMes=d=>{dAt.setMonth(dAt.getMonth()+d);rCal()};
+if($('bTxt')) $('bTxt').oninput=()=>rL(); window.lFlt=()=>{if($('bTxt'))$('bTxt').value=''; if($('bDat'))$('bDat').value=''; rL();rCal()};
 
 window.gPDF = id => {
     let o = dbO.find(x=>x.id==id), c = dbC.find(x=>x.nome==o.cli) || {}; let ck = o.ck || [true,true,true,true,false];
@@ -537,7 +556,6 @@ window.gPOS = () => {
     navigator.clipboard.writeText(t).then(() => { try { Swal.fire('Copiado!', 'Cole no WhatsApp', 'success'); } catch(e) { alert('Copiado!'); } }).catch(() => { try { Swal.fire('Copie:', t, 'info'); } catch(e) { alert('Erro ao copiar'); } });
 };
 
-// FINANCEIRO COM FILTRO AVANÇADO
 window.rFin = () => {
     if (!$('tRec')) return;
     let m = v('fMes');
@@ -564,8 +582,7 @@ window.tPag = async id => { let o=dbO.find(x=>x.id==id); o.pag=o.pag?0:1; await 
 
 const aDl=()=>{if(!$('lCli')) return; $('lCli').innerHTML='';dbC.sort((a,b)=>a.nome.localeCompare(b.nome)).map(c=>$('lCli').innerHTML+=`<option value="${c.nome}">`)};
 
-// ===== GESTÃO DE CLIENTES E EXTRATO FINANCEIRO ===== //
-const rCli=()=>{
+window.rCli=()=>{
     if(!$('lCliRnd')) return; let l=$('lCliRnd'),tx=v('bCliTxt').toLowerCase(),f=dbC.filter(c=>c.nome.toLowerCase().includes(tx)||c.tel?.includes(tx)||c.doc?.includes(tx)||c.ema?.toLowerCase().includes(tx));
     l.innerHTML=f.length?'':'<div style="text-align:center;padding:40px;color:#aaa">Vazio</div>';
     f.map(c=>{
@@ -618,7 +635,6 @@ window.xCSVCli = () => {
     let c = d.map(r => r.map(v => `"${v||''}"`).join(';')).join('\n');
     let a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,%EF%BB%BF' + encodeURIComponent(c); a.download = `Historico_${nome}.csv`; a.click();
 };
-// =================================================== //
 
 if($('fCli')) {
     $('fCli').onsubmit = async e => {
@@ -630,7 +646,7 @@ window.cCEd=()=>{if($('fCli'))$('fCli').reset();if($('cId'))$('cId').value="";if
 window.exCli = async id => { try{Swal.fire({title:'Excluir?',icon:'warning',showCancelButton:!0,confirmButtonColor:'#d33'}).then(async r=>{if(r.isConfirmed){dbC=dbC.filter(c=>c.id!==id);await lf.setItem('dbC',dbC);rCli();aDl()}})}catch(e){if(confirm("Excluir?")){dbC=dbC.filter(c=>c.id!==id);lf.setItem('dbC',dbC).then(()=>{rCli();aDl();})}}};
 if($('bCliTxt')) $('bCliTxt').oninput=rCli;
 
-const rC=()=>{if(!$('rCat')) return; let h='<option value="">-- Selecione --</option>';$('rCat').innerHTML='';dbCat.map(i=>{h+=`<option value="${i.id}">${i.nome} - ${fM(i.valor)}</option>`;$('rCat').innerHTML+=`<div class="cat"><span><i class="ph ph-check-circle" style="color:var(--p)"></i> ${i.nome} (${fM(i.valor)})</span><button class="btn bo" style="padding:6px 12px" onclick="rmC(${i.id})"><i class="ph ph-trash" style="color:#e74c3c"></i></button></div>`});if($('sCat'))$('sCat').innerHTML=h};
+window.rC=()=>{if(!$('rCat')) return; let h='<option value="">-- Selecione --</option>';$('rCat').innerHTML='';dbCat.map(i=>{h+=`<option value="${i.id}">${i.nome} - ${fM(i.valor)}</option>`;$('rCat').innerHTML+=`<div class="cat"><span><i class="ph ph-check-circle" style="color:var(--p)"></i> ${i.nome} (${fM(i.valor)})</span><button class="btn bo" style="padding:6px 12px" onclick="rmC(${i.id})"><i class="ph ph-trash" style="color:#e74c3c"></i></button></div>`});if($('sCat'))$('sCat').innerHTML=h};
 window.aCat=()=>{let i=dbCat.find(x=>x.id==v('sCat'));if(i){if($('dsc'))$('dsc').value+=(v('dsc')?"\n":"")+"- "+i.nome;if($('val'))$('val').value=(parseFloat(v('val'))||0)+i.valor;if($('sCat'))$('sCat').value="";tst.fire({icon:'success',title:'Add!'})}};
 if($('fCat')) {
     $('fCat').onsubmit = async e => { e.preventDefault();dbCat.push({id:Date.now(),nome:v('nCat'),valor:parseFloat(v('vCat'))});await lf.setItem('dbCat', dbCat);e.target.reset();rC();tst.fire({icon:'success',title:'Salvo'})};
@@ -646,7 +662,7 @@ window.edO=id=>{let o=dbO.find(x=>x.id==id);['eId','cli','vei','dat','hor','end'
 window.cEd=()=>{let d=new Date();if($('fOs'))$('fOs').reset();if($('eId'))$('eId').value="";if($('fTit'))$('fTit').innerHTML="Cadastrar Novo Serviço";if($('bSal'))$('bSal').innerHTML=`<i class="ph ph-cloud-arrow-up"></i> CADASTRAR O.S`;if($('bCan'))$('bCan').style.display="none";if($('dat'))$('dat').value=d.toISOString().split('T')[0];if($('hor'))$('hor').value=d.toTimeString().slice(0,5);if($('sts'))$('sts').value="Agendado";if($('pag'))$('pag').value="0";};
 window.exO = async id => { try{Swal.fire({title:'Excluir?',icon:'warning',showCancelButton:!0,confirmButtonColor:'#d33'}).then(async r=>{if(r.isConfirmed){dbO=dbO.filter(o=>o.id!==id);await lf.setItem('dbO', dbO);rL();rCal();rFin();rDsh();rExe()}})}catch(e){if(confirm("Excluir?")){dbO=dbO.filter(o=>o.id!==id);lf.setItem('dbO', dbO).then(()=>{rL();rCal();rFin();rDsh();rExe()})}}};
 
-const rL=()=>{
+window.rL=()=>{
     if(!$('lOs')) return;
     let l=$('lOs'), tx=v('bTxt').toLowerCase(), dt=v('bDat'), t=0;
     
