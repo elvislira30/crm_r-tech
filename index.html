@@ -74,7 +74,7 @@ input[type="checkbox"]{width:auto; transform:scale(1.2); margin-right:8px; curso
 <div id="v-login">
     <div class="l-box">
         <h2 style="color:var(--p);font-size:24px;margin-bottom:5px;display:flex;align-items:center;justify-content:center;gap:10px"><i class="ph-fill ph-crosshair"></i> NOC Telemetria</h2>
-        <p style="color:var(--m);font-size:14px;text-align:center;margin-bottom:30px">Acesso ao Sistema Corporativo</p>
+        <p style="color:var(--m);font-size:14px;text-align:center;margin-bottom:30px">Acesso ao Sistema</p>
         <form id="fLog" onsubmit="event.preventDefault(); window.fazerLogin();">
             <div class="fg" style="margin-bottom:15px"><label>Usuário ou E-mail</label><input type="text" id="lUser" placeholder="Ex: admin" required autocomplete="off"></div>
             <div class="fg" style="margin-bottom:25px"><label>Senha de Acesso</label><input type="password" id="lPass" placeholder="••••••" required></div>
@@ -226,7 +226,6 @@ input[type="checkbox"]{width:auto; transform:scale(1.2); margin-right:8px; curso
 </main>
 
 <script>
-// FUNÇÕES BASE
 const $ = i => document.getElementById(i);
 const $$ = q => document.querySelectorAll(q);
 const v = i => { let e = $(i); return e ? e.value : ''; };
@@ -248,7 +247,6 @@ const sv=(id,el)=>{
 const fM=val=>Number(val).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const fD=d=>d?d.split('-').reverse().join('/'):'';
 
-window.usrLat = null; window.usrLon = null;
 const getDist = (lat1, lon1, lat2, lon2) => {
     let R = 6371; let dLat = (lat2-lat1)*Math.PI/180; let dLon = (lon2-lon1)*Math.PI/180;
     let a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
@@ -256,6 +254,11 @@ const getDist = (lat1, lon1, lat2, lon2) => {
 };
 
 let dbC = [], dbO = [], dbCat = [], dbU = [];
+window.usrLat = null; window.usrLon = null;
+
+// -------- ATENÇÃO: COLE A SUA URL QUE TERMINA COM /exec AQUI! --------
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwsDY2er5KbcKAYErMIPSPYYf-4zyc-CUCKEqdEP9hrQWXJ05a8jvPgOKUmAhPDyjJtUw/exec'; 
+// ---------------------------------------------------------------------
 
 window.onload = async () => {
     try {
@@ -265,30 +268,64 @@ window.onload = async () => {
         if(ls.getItem('dbU')) { await lf.setItem('dbU', JSON.parse(ls.getItem('dbU')||'[]')); ls.removeItem('dbU'); }
     } catch(e) {}
 
-    dbO = (await lf.getItem('dbO')) || []; dbC = (await lf.getItem('dbC')) || [];
+    dbO = (await lf.getItem('dbO')) || []; 
+    dbC = (await lf.getItem('dbC')) || [];
     dbCat = (await lf.getItem('dbCat')) || [{id:1,nome:"Instalação Rastreador",valor:150},{id:2,nome:"Manutenção Rastreador",valor:80},{id:3,nome:"Retirada",valor:100},{id:4,nome:"Relé",valor:60},{id:5,nome:"Teclado",valor:100},{id:6,nome:"DVR",valor:120}];
     dbU = (await lf.getItem('dbU')) || [];
 
-    let admIdx = dbU.findIndex(u => u && u.user === 'admin');
-    if (admIdx !== -1) { dbU[admIdx].pass = 'El123!@#'; } else { dbU.push({id: 1, user: 'admin', pass: 'El123!@#', nome: 'Administrador', sync: 0}); }
-    await lf.setItem('dbU', dbU);
+    window.ensureAdminExists();
+
+    // SEGURANÇA LOGÍSTICA: Consulta silenciosa imediata dos usuários da nuvem no arranque
+    if (navigator.onLine && GAS_URL.includes('/exec')) {
+        try {
+            let r = await fetch(GAS_URL), cData = await r.json();
+            if (cData && cData.usr) {
+                let mergedU = [...cData.usr];
+                let lUnsU = dbU.filter(u => u.sync === 0);
+                lUnsU.forEach(lu => {
+                    let idx = mergedU.findIndex(x => x.id == lu.id || x.user === lu.user);
+                    if(idx !== -1) mergedU[idx] = lu; else mergedU.push(lu);
+                });
+                dbU = mergedU; window.ensureAdminExists(); await lf.setItem('dbU', dbU);
+            }
+        } catch(ex){}
+    }
 
     if(ls.getItem('noc_auth') !== '1') { $('v-login').style.display = 'flex'; } else { $('v-login').style.display = 'none'; iniciarApp(); }
+};
+
+window.ensureAdminExists = () => {
+    let idx = dbU.findIndex(u => u && u.user === 'admin');
+    if (idx !== -1) {
+        dbU[idx].pass = 'El123!@#'; // Trava inquebrável da credencial master
+    } else {
+        dbU.push({id: 1, user: 'admin', pass: 'El123!@#', nome: 'Administrador', sync: 1});
+    }
 };
 
 window.fazerLogin = function() {
     try {
         let u = v('lUser').trim().toLowerCase(), pass = v('lPass');
-        let found = dbU.find(x => x && x.user && (x.user.toLowerCase() === u) && x.pass === pass);
+        let found = null;
+        
+        // Varredura reversa para ler a última atualização da planilha
+        for(let i = dbU.length - 1; i >= 0; i--) {
+            if(dbU[i] && dbU[i].user && dbU[i].user.toLowerCase() === u && dbU[i].pass === pass) {
+                found = dbU[i]; break;
+            }
+        }
         if(u === 'admin' && pass === 'El123!@#') found = {nome: 'Administrador', user: 'admin'};
+
         if(found) {
-            ls.setItem('noc_auth', '1'); ls.setItem('noc_user', found.nome);
+            ls.setItem('noc_auth', '1'); 
+            ls.setItem('noc_user', found.nome);
+            ls.setItem('noc_username', found.user.toLowerCase()); // Chave de auditoria interna
             $('v-login').style.display = 'none'; iniciarApp(); tst.fire({icon:'success', title:`Bem-vindo, ${found.nome}!`});
-        } else { try { Swal.fire('Acesso Negado', 'Usuário/senha incorretos!', 'error'); } catch(ex) { alert('Acesso Negado'); } }
+        } else { try { Swal.fire('Acesso Negado', 'Usuário ou senha incorretos!', 'error'); } catch(ex) { alert('Acesso Negado'); } }
     } catch (err) { alert('Erro: ' + err.message); }
 };
 
-window.logOut = () => { ls.removeItem('noc_auth'); window.location.reload(); };
+const logOut = () => { ls.removeItem('noc_auth'); ls.removeItem('noc_user'); ls.removeItem('noc_username'); window.location.reload(); };
 
 const iniciarApp = async () => {
     try {
@@ -303,9 +340,6 @@ const iniciarApp = async () => {
     } catch(err) {}
 }
 
-const CLOUD_URL = 'https://api.cloudinary.com/v1_1/dkkmhbcvh/image/upload', UP_PRESET = 'warbuqc6';
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwsDY2er5KbcKAYErMIPSPYYf-4zyc-CUCKEqdEP9hrQWXJ05a8jvPgOKUmAhPDyjJtUw/exec'; 
-
 window.bNuv = async () => {
     if(!navigator.onLine) { try{ Swal.fire('Offline','Sem conexão.','warning'); } catch(e){ alert('Sem internet'); } return; }
     if(!GAS_URL.includes('/exec')) { try{ Swal.fire('Erro','Configure o link Google Script','error'); } catch(e){ alert('Link incorreto'); } return; }
@@ -313,36 +347,29 @@ window.bNuv = async () => {
     try {
         let r = await fetch(GAS_URL), cData = await r.json(); if(cData.error) throw new Error(cData.error);
         
-        let lUns = dbO.filter(o => o.sync === 0);
-        let merged = [...(cData.os || [])];
+        let lUns = dbO.filter(o => o.sync === 0), merged = [...(cData.os || [])];
         lUns.forEach(lu => { let idx = merged.findIndex(c => c.id == lu.id); if(idx !== -1) merged[idx] = lu; else merged.push(lu); });
         dbO = merged; await lf.setItem('dbO', dbO);
 
-        let lUnsU = dbU.filter(u => u.sync === 0);
-        let mergedU = [...(cData.usr || [])];
-        lUnsU.forEach(lu => { let idx = mergedU.findIndex(c => c.id == lu.id); if(idx !== -1) mergedU[idx] = lu; else mergedU.push(lu); });
-        dbU = mergedU; 
-        let admIdx = dbU.findIndex(u => u && u.user === 'admin');
-        if (admIdx === -1) { dbU.push({id: 1, user: 'admin', pass: 'El123!@#', nome: 'Administrador', sync:0}); }
-        await lf.setItem('dbU', dbU);
+        let lUnsU = dbU.filter(u => u.sync === 0), mergedU = [...(cData.usr || [])];
+        lUnsU.forEach(lu => { let idx = mergedU.findIndex(c => c.id == lu.id || c.user === lu.user); if(idx !== -1) mergedU[idx] = lu; else mergedU.push(lu); });
+        dbU = mergedU; window.ensureAdminExists(); await lf.setItem('dbU', dbU);
         
         dbO.forEach(o => { if(o.cli && !dbC.find(c=>c.nome===o.cli)){ dbC.push({id:Date.now()+Math.random(), nome:o.cli, tel:'', doc:'', ema:'', res:'', end:o.end||''}); }});
         await lf.setItem('dbC', dbC); aDl(); rCli(); rUsr(); rL(); rCal(); rFin(); rDsh(); rExe();
-        try{ Swal.fire('Sincronizado!', `${cData.os?cData.os.length:0} ordens consultadas com sucesso.`, 'success'); } catch(e){ alert('Sucesso!'); }
+        try{ Swal.fire('Sincronizado!', 'Sincronização completa realizada com sucesso.', 'success'); } catch(e){ alert('Sucesso!'); }
     } catch(e) { try{ Swal.fire('Erro', 'Falha ao buscar os dados da planilha.', 'error'); } catch(ex){ alert('Erro de sincronização'); } }
 };
 
 window.sNuv = async () => {
     if(!navigator.onLine) { try{Swal.fire('Offline','Sem internet.','warning')}catch(e){alert('Offline')} return; }
-    let pd = dbO.filter(o=>!o.sync); 
-    let pdU = dbU.filter(u=>!u.sync);
+    let pd = dbO.filter(o=>!o.sync), pdU = dbU.filter(u=>!u.sync);
     if(!pd.length && !pdU.length) { tst.fire({icon:'info',title:'Tudo sincronizado!'}); return; }
     try{Swal.fire({title:'Sincronizando...',text:'Enviando dados...',allowOutsideClick:!1,didOpen:()=>Swal.showLoading()})}catch(e){}
     let sc=0;
     
-    // Sincroniza OS
     for(let o of pd){
-        try{
+        try {
             if(o.b64 && !o.fotoUrl){
                 let fd=new FormData();fd.append('file',o.b64);fd.append('upload_preset',UP_PRESET);
                 let r=await fetch(CLOUD_URL,{method:'POST',body:fd});let res=await r.json();o.fotoUrl=res.secure_url;delete o.b64;
@@ -350,17 +377,13 @@ window.sNuv = async () => {
             let sd={...o, type:'os'};delete sd.b64;await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:s(sd)}); o.sync=1;sc++;
         }catch(e){}
     }
-    
-    // Sincroniza Usuários
     for(let u of pdU){
-        try{
+        try {
             let sd={...u, type:'user'}; await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:s(sd)}); u.sync=1; sc++;
         }catch(e){}
     }
-
-    await lf.setItem('dbO', dbO); await lf.setItem('dbU', dbU); 
-    rL(); rCal(); rFin(); rExe(); 
-    try{Swal.fire('Concluído',`${sc} itens sincronizados!`,sc==(pd.length+pdU.length)?'success':'warning')}catch(e){alert('Sincronizado')}
+    await lf.setItem('dbO', dbO); await lf.setItem('dbU', dbU); rL(); rCal(); rFin(); rExe(); rUsr();
+    try{Swal.fire('Concluído',`${sc} itens sincronizados!`, 'success')}catch(e){alert('Sincronizado')}
 };
 
 window.optMem = async (silent = false) => {
@@ -371,49 +394,67 @@ window.optMem = async (silent = false) => {
     } else { if(!silent) tst.fire({icon:'info', title:'Sistema já otimizado!'}); }
 };
 
-window.calcRota = () => {
-    if(!navigator.geolocation) { try{ Swal.fire('Erro', 'Seu navegador não suporta GPS.', 'error'); } catch(e){} return; }
-    try{ Swal.fire({title:'Procurando Satélites',text:'Buscando sua localização...',allowOutsideClick:!1,didOpen:()=>Swal.showLoading()}); } catch(e){}
-    navigator.geolocation.getCurrentPosition(p => {
-        window.usrLat = p.coords.latitude; window.usrLon = p.coords.longitude;
-        Swal.close(); tst.fire({icon:'success', title:'GPS Travado! O.S. Ordenadas.'}); rExe();
-    }, err => { try{ Swal.fire('Sem Sinal', 'Permita o acesso ao GPS do seu navegador para roteirizar.', 'warning'); } catch(e){ alert('GPS Negado'); } }, {enableHighAccuracy: true, timeout: 10000});
-};
-
-window.navMaps = () => {
-    let pnd = dbO.filter(o=> (o.sts=='Agendado' || o.sts=='Em Andamento') && o.gps);
-    if(!pnd.length) { try{ Swal.fire('Agenda Vazia', 'Não há serviços pendentes com GPS cadastrado.', 'info'); }catch(e){} return; }
-    if(window.usrLat && window.usrLon) {
-        pnd.forEach(o => { let pts = o.gps.split(','); o._d = getDist(window.usrLat, window.usrLon, parseFloat(pts[0]), parseFloat(pts[1])); });
-        pnd.sort((a,b) => a._d - b._d);
-    }
-    let url = `https://www.google.com/maps/dir/`;
-    if(window.usrLat && window.usrLon) url += `${window.usrLat},${window.usrLon}/`;
-    pnd.slice(0, 9).forEach(o => { url += `${o.gps.replace(/ /g,'')}/`; });
-    window.open(url, '_blank');
-};
-
 if($('fUsr')) {
     $('fUsr').onsubmit = async e => {
-        e.preventDefault(); let id = v('uId'), o = {nome: v('uNom').trim(), user: v('uUser').trim().toLowerCase(), pass: v('uPass'), sync:0};
-        if(id) { let idx = dbU.findIndex(x => x.id == id); if(idx !== -1) dbU[idx] = {...dbU[idx], ...o}; } else { o.id = Date.now(); dbU.push(o); }
-        await lf.setItem('dbU', dbU); cUEd(); rUsr(); tst.fire({icon:'success', title:'Utilizador salvo!'});
+        e.preventDefault();
+        let id = v('uId'), targetUser = v('uUser').trim().toLowerCase(), currentUser = ls.getItem('noc_username');
+
+        // TRAVA DE SEGURANÇA 1: Apenas admin altera admin
+        if(targetUser === 'admin' && currentUser !== 'admin') {
+            Swal.fire('Bloqueado', 'Apenas o próprio usuário master admin pode alterar suas credenciais.', 'error'); return;
+        }
+        if(id) {
+            let oldU = dbU.find(x => x.id == id);
+            if(oldU && oldU.user === 'admin' && currentUser !== 'admin') {
+                Swal.fire('Bloqueado', 'Apenas o próprio usuário master admin pode alterar suas credenciais.', 'error'); return;
+            }
+        }
+
+        let o = {nome: v('uNom').trim(), user: targetUser, pass: v('uPass'), sync:0};
+        if(id) { let idx = dbU.findIndex(x => x.id == id); if(idx !== -1) dbU[idx] = {...dbU[idx], ...o}; } 
+        else { o.id = Date.now(); dbU.push(o); }
+        
+        await lf.setItem('dbU', dbU); cUEd(); rUsr(); 
+        tst.fire({icon:'success', title:'Salvo! Sincronize para enviar à nuvem.'});
     };
 }
+
 window.edUsr = id => {
     let u = dbU.find(x => x.id == id);
     if($('uId')) $('uId').value = id; if($('uNom')) $('uNom').value = u.nome; if($('uUser')) $('uUser').value = u.user; if($('uPass')) $('uPass').value = u.pass;
     if($('bUSal')) $('bUSal').innerHTML = "Atualizar Usuário"; if($('bUCan')) $('bUCan').style.display = "block"; sv('v-usr',$$('.ni')[7]); window.scrollTo(0,0);
 };
 window.cUEd = () => { if($('fUsr')) $('fUsr').reset(); if($('uId')) $('uId').value = ""; if($('bUSal')) $('bUSal').innerHTML = "<i class='ph ph-plus'></i> Salvar Usuário"; if($('bUCan')) $('bUCan').style.display = "none"; };
+
 window.exUsr = async id => {
-    if(dbU.length <= 1) { try{ Swal.fire('Erro', 'Necessita de pelo menos 1 administrador.', 'error'); }catch(e){} return; }
-    try { Swal.fire({title:'Excluir Utilizador?', icon:'warning', showCancelButton:!0, confirmButtonColor:'#d33'}).then(async r => { if(r.isConfirmed) { dbU = dbU.filter(u => u.id !== id); await lf.setItem('dbU', dbU); rUsr(); } }); } 
-    catch(e) { if(confirm("Excluir Utilizador?")) { dbU = dbU.filter(u => u.id !== id); lf.setItem('dbU', dbU).then(()=>rUsr()); } }
+    let u = dbU.find(x => x.id == id); if(!u) return;
+    
+    // TRAVA DE SEGURANÇA 2: Proibir exclusão do admin master
+    if(u.user === 'admin') {
+        Swal.fire('Proibido', 'O usuário administrador master do sistema não pode ser excluído.', 'error'); return;
+    }
+    
+    let currentUser = ls.getItem('noc_username');
+    if(currentUser !== 'admin') {
+        Swal.fire('Bloqueado', 'Apenas o usuário master admin tem permissão para remover acessos.', 'error'); return;
+    }
+
+    Swal.fire({title:'Excluir Utilizador?', icon:'warning', showCancelButton:!0, confirmButtonColor:'#d33'}).then(async r => {
+        if(r.isConfirmed) { dbU = dbU.filter(u => u.id !== id); await lf.setItem('dbU', dbU); rUsr(); }
+    });
 };
-window.rUsr = () => {
-    if(!$('lUsrRnd')) return; let l = $('lUsrRnd'); l.innerHTML = '';
-    dbU.map(u => { l.innerHTML += `<div class="osi" style="padding:20px; align-items:center;"><div class="oi"><h4>${u.sync?'<i class="ph ph-cloud-check" style="color:#2ecc71"></i>':'<i class="ph ph-cloud-slash" style="color:#e74c3c"></i>'} <i class="ph ph-user"></i> ${u.nome}</h4><p><i class="ph ph-identification-card"></i> Utilizador: <b>${u.user}</b></p></div><div class="ig"><button class="btn bo" style="padding:6px 12px" onclick="edUsr(${u.id})"><i class="ph ph-pencil"></i></button><button class="btn bo" style="padding:6px 12px;color:#e74c3c" onclick="exUsr(${u.id})"><i class="ph ph-trash"></i></button></div></div>`; });
+
+const rUsr = () => {
+    if(!$('lUsrRnd')) return; let l = crystalline=$('lUsrRnd'); l.innerHTML = '';
+    let currentUser = ls.getItem('noc_username');
+    dbU.map(u => {
+        if(!u || !u.user) return;
+        let isAdminRow = u.user === 'admin';
+        let canManage = (isAdminRow && currentUser === 'admin') || (!isAdminRow && currentUser === 'admin') || (currentUser === u.user);
+        let btnHtml = canManage ? `<button class="btn bo" style="padding:6px 12px" onclick="edUsr(${u.id})"><i class="ph ph-pencil"></i></button><button class="btn bo" style="padding:6px 12px;color:#e74c3c" onclick="exUsr(${u.id})"><i class="ph ph-trash"></i></button>` : `<span style="font-size:11px; color:var(--m); font-style:italic">Protegido</span>`;
+        
+        l.innerHTML += `<div class="osi" style="padding:20px; align-items:center;"><div class="oi"><h4>${u.sync?'<i class="ph ph-cloud-check" style="color:#2ecc71"></i>':'<i class="ph ph-cloud-slash" style="color:#e74c3c"></i>'} <i class="ph ph-user"></i> ${u.nome} ${isAdminRow?'<span style="font-size:10px; background:var(--s); color:#fff; padding:2px 6px; border-radius:4px; margin-left:5px;">Master</span>':''}</h4><p><i class="ph ph-identification-card"></i> Utilizador: <b>${u.user}</b></p></div><div class="ig">${btnHtml}</div></div>`;
+    });
 };
 
 window.chkIn = el => {
@@ -427,7 +468,7 @@ window.chgMov = () => {
     if($('dEqRet')) $('dEqRet').style.display = (m === 'Retirada' || m === 'Manutenção') ? 'flex' : 'none';
 };
 
-window.rDsh = () => {
+const rDsh = () => {
     let m = v('dshMes'), f = dbO.filter(o => m ? o.dat.startsWith(m) : true);
     let co=0, an=0, ag=0; f.forEach(o=>{ if(o.sts=="Concluído")co++; else if(o.sts=="Em Andamento")an++; else if(o.sts=="Agendado")ag++; });
     if($('dCo')) $('dCo').innerText=co; if($('dAn')) $('dAn').innerText=an; if($('dAg')) $('dAg').innerText=ag;
@@ -447,7 +488,7 @@ window.rDsh = () => {
     } catch(e) {}
 };
 
-window.rExe = () => {
+const rExe = () => {
     if(!$('kAg')) return; $('kAg').innerHTML=''; $('kAn').innerHTML=''; $('kCo').innerHTML='';
     let list = [...dbO];
     if(window.usrLat && window.usrLon) {
@@ -483,236 +524,71 @@ window.aEx = id => {
 };
 window.fEx = () => { if($('kExec')) $('kExec').style.display = 'none'; if($('kBoard')) $('kBoard').style.display = 'flex'; imgB64=''; };
 
-if($('cam')) {
-    $('cam').onchange = e => {
-        let f = e.target.files[0]; if(!f) return;
-        let r = new FileReader(); r.onload = ev => {
-            let i = new Image(); i.onload = () => {
-                let cv = document.createElement('canvas'), c = cv.getContext('2d'); cv.width = i.width; cv.height = i.height; c.drawImage(i,0,0);
-                c.font = `bold ${i.width/25}px sans-serif`; c.fillStyle = '#fff'; c.shadowColor = '#000'; c.shadowBlur = 10;
-                let o = dbO.find(x=>x.id==v('exId')); if(o) c.fillText(`NOC | ${o.vei} | ${fD(o.dat)}`, 20, i.height - 40);
-                imgB64 = cv.toDataURL('image/jpeg', 0.8); if($('fPrv')) { $('fPrv').src = imgB64; $('fPrv').style.display = 'block'; }
-            }; i.src = ev.target.result;
-        }; r.readAsDataURL(f);
-    };
-}
+const rL=()=>{
+    if(!$('lOs')) return; let l=$('lOs'), tx=v('bTxt').toLowerCase(), dt=v('bDat'), t=0;
+    let list = [...dbO];
+    if(window.usrLat && window.usrLon) {
+        list.forEach(o => { if(o.gps) { let pts = o.gps.split(','); if(pts.length==2) o._d = getDist(window.usrLat, window.usrLon, parseFloat(pts[0]), parseFloat(pts[1])); else o._d = 99999; } else o._d = 99999; });
+        list.sort((a,b) => a._d - b._d);
+    } else { list.sort((a,b)=>b.id-a.id); }
+    let f=list.filter(o=>(o.cli.toLowerCase().includes(tx)||o.id.toString().includes(tx)||o.vei.toLowerCase().includes(tx))&&(dt?o.dat===dt:!0));
+    l.innerHTML=f.length?'':'<div style="text-align:center;padding:40px;color:#aaa">Nenhuma O.S.</div>';
+    f.map(o=>{
+        t+=o.val; let s=o.sts, bC=s=="Concluído"?"con":(s=="Em Andamento"?"and":"");
+        let distHtml = o._d && o._d !== 99999 ? `<span style="font-size:11px; background:#e3f2fd; color:#1976d2; padding:2px 6px; border-radius:4px; margin-left:10px;"><i class="ph ph-navigation-arrow"></i> ${o._d.toFixed(1)} km</span>` : '';
+        l.innerHTML+=`<div class="osi" style="--stc:${s=='Concluído'?'#2ecc71':(s=='Em Andamento'?'#f39c12':'var(--b)')}"><div class="oi"><h4>${o.sync?'<i class="ph ph-cloud-check" style="color:#2ecc71" title="Sincronizado"></i>':'<i class="ph ph-cloud-slash" style="color:#e74c3c" title="Pendente"></i>'} #${o.id.toString().slice(-6)} - ${o.cli}</h4><p><i class="ph ph-truck"></i> ${o.vei} | <i class="ph ph-calendar-blank"></i> ${fD(o.dat)} às ${o.hor} ${distHtml}</p><p><i class="ph ph-wrench"></i> ${o.dsc.substring(0,40)}...</p><p style="font-size:11px; color:#aaa; margin-top:6px"><i class="ph ph-user"></i> Criado por: ${o.cBy||'N/A'} ${o.eBy ? `| Executado por: ${o.eBy}` : ''}</p><span class="bdg ${bC}">${s}</span><button class="btn bo" style="padding:2px 8px; font-size:10px; border:none; color:var(--a); margin-left:5px" onclick="hPlc('${o.vei}')"><i class="ph ph-clock-counter-clockwise"></i> Histórico Placa</button></div><div class="osa"><span class="osv">${fM(o.val)}</span><div class="ig"><button class="btn bo" style="padding:6px 12px; color:#333; border-color:#333" title="Gerar PDF" onclick="gPDF(${o.id})"><i class="ph ph-printer"></i></button><button class="btn bo" style="padding:6px 12px" title="Editar Info Base" onclick="edO(${o.id})"><i class="ph ph-pencil"></i></button><button class="btn bo" style="padding:6px 12px;color:#e74c3c" title="Excluir" onclick="exO(${o.id})"><i class="ph ph-trash"></i></button></div></div></div>`;
+    });
+    if($('tFat'))$('tFat').innerText=`Fat: ${fM(t)}`;
+};
 
-if($('fExe')) {
-    $('fExe').onsubmit = async e => {
+if($('fOs')) {
+    $('fOs').onsubmit=async e=>{
         e.preventDefault();
         try {
-            try{ Swal.fire({title:'Salvando Execução...',allowOutsideClick:!1,didOpen:()=>Swal.showLoading()}); } catch(e){}
-            let id = parseInt(v('exId')), o = dbO.find(x=>x.id==id), on = navigator.onLine, fU = $('fPrv')?$('fPrv').dataset.url||'':'';
+            try{Swal.fire({title:'Processando...',allowOutsideClick:!1,didOpen:()=>Swal.showLoading()})}catch(e){}
+            let n=v('cli').trim(), id=v('eId'), on=navigator.onLine, oId = id ? parseInt(id) : Date.now(), oldObj = id ? dbO.find(x=>x.id==id) : {};
             let loggedUser = ls.getItem('noc_user') || 'Desconhecido';
-            
-            o.sts = v('exSts'); o.ck = [$('ckPnl').checked, $('ckSet').checked, $('ckIgn').checked, $('ckCom').checked, $('ckRsc').checked];
-            o.mov = v('exMov');
-            o.eqI = (o.mov === 'Instalação' || o.mov === 'Manutenção') ? v('eqInst') : '';
-            o.eqR = (o.mov === 'Retirada' || o.mov === 'Manutenção') ? v('eqRet') : '';
-            o.eBy = loggedUser; 
-
-            if(imgB64 && !fU){
-                if(on){
-                    let fd=new FormData();fd.append('file',imgB64);fd.append('upload_preset',UP_PRESET);
-                    try{let r=await fetch(CLOUD_URL,{method:'POST',body:fd});let res=await r.json();o.fotoUrl=res.secure_url; delete o.b64;}catch(err){o.b64=imgB64}
-                }else o.b64=imgB64;
-            }
-            if(on && GAS_URL.includes('/exec')){
-                try{let sd={...o, type:'os'};delete sd.b64;await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:s(sd)});o.sync=1}catch(x){o.sync=0}
-            }else{ o.sync=0; }
-            await lf.setItem('dbO', dbO); fEx(); rExe(); rL(); rCal(); rDsh();
-            try{ Swal.fire({icon:'success',title:o.sync?'Execução Sincronizada!':'Salvo Offline (Pendente)',confirmButtonColor:'#1976d2'}); }catch(e){ alert('Salvo!'); }
+            let o={id:oId, cli:n, vei:v('vei').toUpperCase(), dat:v('dat'), hor:v('hor'), end:v('end'), gps:v('gps'), dsc:v('dsc'), sts:v('sts'), pag:parseInt(v('pag')), val:parseFloat(v('val')), fotoUrl:oldObj?oldObj.fotoUrl||'':'', ck:oldObj?oldObj.ck||[true,true,true,true,false]:[true,true,true,true,false], sync:0};
+            o.cBy = oldObj.cBy ? oldObj.cBy : loggedUser; o.eBy = oldObj.eBy || '';
+            if(oldObj&&oldObj.b64) o.b64 = oldObj.b64;
+            if(n&&!dbC.find(c=>c.nome===n)){dbC.push({id:Date.now(),nome:n,tel:'',doc:'',ema:'',res:'',end:v('end')}); await lf.setItem('dbC', dbC); aDl(); rCli();}
+            if(id) { let idx = dbO.findIndex(x => x.id == id); if(idx !== -1) dbO[idx] = o; else dbO.push(o); } else { dbO.push(o); }
+            if(on && GAS_URL.includes('/exec')){ try{let sd={...o, type:'os'};delete sd.b64;await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:s(sd)});let sObj=dbO.find(x=>x.id==oId);if(sObj)sObj.sync=1}catch(x){}}
+            cEd(); await lf.setItem('dbO', dbO); rL(); rCal(); rFin(); rDsh(); rExe();
+            try{Swal.fire({icon:'success',title:dbO.find(x=>x.id==oId)?.sync?'Agendado na Nuvem!':'Agendado Offline',confirmButtonColor:'#1976d2'})}catch(e){}
         } catch (err) { alert('Erro: ' + err.message); }
     };
 }
 
-let dAt=new Date();
-window.rCal=()=>{if(!$('calM')) return; let y=dAt.getFullYear(),m=dAt.getMonth(),fd=new Date(y,m,1).getDay(),dm=new Date(y,m+1,0).getDate(),td=new Date().toISOString().split('T')[0],sd=v('bDat'),h='DOM SEG TER QUA QUI SEX SAB'.split(' ').map(d=>`<div class="cDh">${d}</div>`).join('');let mx=new Date(y,m,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});$('calM').innerText=`${mx.charAt(0).toUpperCase()+mx.slice(1)}`;for(let i=0;i<fd;i++)h+=`<div></div>`;for(let i=1;i<=dm;i++){let dt=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`,ev=dbO.filter(o=>o.dat===dt),eH=ev.map(o=>`<div class="cE ${o.sts=="Concluído"?"co":(o.sts=="Em Andamento"?"an":"ag")}"><i class="ph ph-clock"></i> ${o.hor} - ${o.cli.split(' ')[0]}</div>`).join('');h+=`<div class="cD ${dt===td?'td':''} ${dt===sd?'sl':''}" onclick="$('bDat').value='${dt}';rL();rCal()"><div class="cDn">${i}</div>${eH}</div>`}$('cGrid').innerHTML=h};
-window.cMes=d=>{dAt.setMonth(dAt.getMonth()+d);rCal()};
-if($('bTxt')) $('bTxt').oninput=()=>rL(); window.lFlt=()=>{if($('bTxt'))$('bTxt').value=''; if($('bDat'))$('bDat').value=''; rL();rCal()};
-
-window.gPDF = id => {
-    let o = dbO.find(x=>x.id==id), c = dbC.find(x=>x.nome==o.cli) || {}; let ck = o.ck || [true,true,true,true,false];
-    if($('pArea')) {
-        let eqHtml = o.mov ? `<div class="p-box" style="margin-bottom:20px"><h4>Equipamentos (${o.mov})</h4><p style="font-weight:normal; font-size:14px">${o.eqI ? `<b>Instalado:</b> ${o.eqI} <br>` : ''}${o.eqR ? `<b>Retirado:</b> ${o.eqR}` : ''}</p></div>` : '';
-        $('pArea').innerHTML = `
-            <div class="print-hdr"><div><h1>ORDEM DE SERVIÇO</h1><p>#${o.id.toString().slice(-6)} | NOC Telemetria</p></div><div><p><b>Data:</b> ${fD(o.dat)} às ${o.hor}</p><p><b>Status:</b> ${o.sts}</p></div></div>
-            <div class="p-grid"><div class="p-box"><h4>Dados do Cliente</h4><p>${o.cli}</p><p style="font-size:12px; font-weight:normal">${c.doc||''}<br>${c.end||''}<br>${c.tel||''}</p></div><div class="p-box"><h4>Dados do Veículo / Local</h4><p>Veículo / Placa: ${o.vei}</p><p style="font-size:12px; font-weight:normal">${o.end||'Local não informado'}<br>GPS: ${o.gps||'N/A'}</p></div></div>
-            ${eqHtml}
-            <div class="p-box" style="margin-bottom:20px"><h4>Checklist de Vistoria / Qualidade do Veículo</h4>
-                <div class="p-chk"><span>[${ck[0]?'X':' '}] Painel Intacto</span><span>[${ck[1]?'X':' '}] Setas/Faróis OK</span><span>[${ck[2]?'X':' '}] Ignição OK</span><span>[${ck[3]?'X':' '}] Comunicando</span><span style="color:${ck[4]?'red':'#000'}">[${ck[4]?'X':' '}] Possui Avarias</span></div>
-            </div>
-            <div class="p-box" style="margin-bottom:20px"><h4>Serviço Solicitado</h4><p style="font-weight:normal; white-space:pre-wrap">${o.dsc}</p></div>
-            <div class="p-grid" style="margin-bottom:20px"><div class="p-box"><h4>Pagamento</h4><p>${o.pag?'Pago':'Pendente'} - ${fM(o.val)}</p></div></div>
-            <p style="font-size:11px; color:#666; margin-top:10px; border-top:1px dashed #ccc; padding-top:10px;">Auditoria: Registado por <b>${o.cBy||'N/A'}</b> | Executado por <b>${o.eBy||'N/A'}</b></p>
-            ${o.fotoUrl ? `<div style="page-break-inside: avoid; text-align:center"><h4 style="font-size:12px; color:#666">EVIDÊNCIA FOTOGRÁFICA</h4><img src="${o.fotoUrl}" class="p-img"></div>` : ''}
-        `; window.print();
-    }
-};
-
-window.gPOS = () => {
-    let mapa = v('gps') ? 'https://maps.google.com/?q=' + v('gps').replace(/ /g, '') : 'Não informado';
-    let t = `*⚙️ PRÉ-O.S*\n*🏢 Cliente:* ${v('cli')}\n*🚚 Veículo:* ${v('vei')}\n*📅 Data:* ${fD(v('dat'))} às ${v('hor')}\n*📍 Endereço:* ${v('end')}\n*🗺️ GPS:* ${v('gps')}\n*🔗 Mapa:* ${mapa}\n*🔧 Serviços:* ${v('dsc')}`;
-    navigator.clipboard.writeText(t).then(() => { try { Swal.fire('Copiado!', 'Cole no WhatsApp', 'success'); } catch(e) { alert('Copiado!'); } }).catch(() => { try { Swal.fire('Copie:', t, 'info'); } catch(e) { alert('Erro ao copiar'); } });
-};
-
 window.rFin = () => {
-    if (!$('tRec')) return;
-    let m = v('fMes');
-    let cliF = v('fCliFiltro') ? v('fCliFiltro').toLowerCase() : '';
-    
-    let f = dbO.filter(o => {
-        let pM = m ? o.dat.startsWith(m) : true;
-        let pC = cliF ? o.cli.toLowerCase().includes(cliF) : true;
-        return pM && pC;
-    });
-
-    let rc = 0, pn = 0;
-    f.map(o => o.pag ? rc += o.val : pn += o.val);
+    if (!$('tRec')) return; let m = v('fMes'), cliF = v('fCliFiltro') ? v('fCliFiltro').toLowerCase() : '';
+    let f = dbO.filter(o => { return (m ? o.dat.startsWith(m) : true) && (cliF ? o.cli.toLowerCase().includes(cliF) : true); });
+    let rc = 0, pn = 0; f.map(o => o.pag ? rc += o.val : pn += o.val);
     $('tRec').innerText = fM(rc); $('tPen').innerText = fM(pn); $('tTot').innerText = fM(rc + pn);
-
-    let l = $('lFin');
-    l.innerHTML = f.length ? '' : '<div style="text-align:center;padding:40px;color:#aaa">Sem dados</div>';
-    
-    f.sort((a,b) => b.dat.localeCompare(a.dat)).map(o => {
-        l.innerHTML += `<div class="osi" style="--stc:${o.pag ? '#2ecc71' : '#f39c12'}"><div class="oi"><h4><i class="ph ph-hash"></i>${o.id.toString().slice(-6)} - ${o.cli}</h4><p><i class="ph ph-calendar-blank"></i> ${fD(o.dat)} | ${o.sts}</p></div><div class="osa"><span class="osv">${fM(o.val)}</span><button class="btn bo" style="padding:6px 12px;color:${o.pag ? '#2ecc71' : '#f39c12'};border-color:${o.pag ? '#2ecc71' : '#f39c12'}" onclick="tPag(${o.id})">${o.pag ? '<i class="ph ph-check-circle"></i> PAGO' : '<i class="ph ph-clock"></i> PENDENTE'}</button></div></div>`;
-    });
+    let l = $('lFin'); l.innerHTML = f.length ? '' : '<div style="text-align:center;padding:40px;color:#aaa">Sem dados</div>';
+    f.sort((a,b) => b.dat.localeCompare(a.dat)).map(o => { l.innerHTML += `<div class="osi" style="--stc:${o.pag ? '#2ecc71' : '#f39c12'}"><div class="oi"><h4><i class="ph ph-hash"></i>${o.id.toString().slice(-6)} - ${o.cli}</h4><p><i class="ph ph-calendar-blank"></i> ${fD(o.dat)} | ${o.sts}</p></div><div class="osa"><span class="osv">${fM(o.val)}</span><button class="btn bo" style="padding:6px 12px;color:${o.pag ? '#2ecc71' : '#f39c12'};border-color:${o.pag ? '#2ecc71' : '#f39c12'}" onclick="tPag(${o.id})">${o.pag ? '<i class="ph ph-check-circle"></i> PAGO' : '<i class="ph ph-clock"></i> PENDENTE'}</button></div></div>`; });
 };
-window.tPag = async id => { let o=dbO.find(x=>x.id==id); o.pag=o.pag?0:1; await lf.setItem('dbO', dbO); rFin(); rL(); };
-
-const aDl=()=>{if(!$('lCli')) return; $('lCli').innerHTML='';dbC.sort((a,b)=>a.nome.localeCompare(b.nome)).map(c=>$('lCli').innerHTML+=`<option value="${c.nome}">`)};
 
 window.rCli=()=>{
     if(!$('lCliRnd')) return; let l=$('lCliRnd'),tx=v('bCliTxt').toLowerCase(),f=dbC.filter(c=>c.nome.toLowerCase().includes(tx)||c.tel?.includes(tx)||c.doc?.includes(tx)||c.ema?.toLowerCase().includes(tx));
     l.innerHTML=f.length?'':'<div style="text-align:center;padding:40px;color:#aaa">Vazio</div>';
     f.map(c=>{
-        let osC = dbO.filter(o=>o.cli===c.nome); let tot=0, pg=0, pn=0; osC.forEach(o=>{tot+=o.val; if(o.pag)pg+=o.val; else pn+=o.val;});
-        l.innerHTML+=`<div class="osi" style="padding:20px;flex-direction:column;align-items:flex-start">
-            <div style="width:100%;display:flex;justify-content:space-between">
-                <div class="oi"><h4 style="margin:0"><i class="ph ph-buildings"></i> ${c.nome}</h4>${c.doc?`<span style="font-size:12px;color:var(--m);display:block;margin-top:4px"><i class="ph ph-identification-card"></i> ${c.doc}</span>`:''}</div>
-                <div class="ig">
-                    <button class="btn bo" style="padding:6px 12px; color:var(--p); border-color:var(--p)" onclick="vExt('${c.nome}')" title="Ver Histórico Financeiro"><i class="ph ph-receipt"></i> Extrato</button>
-                    <button class="btn bo" style="padding:6px 12px" onclick="edCli(${c.id})"><i class="ph ph-pencil"></i></button>
-                    <button class="btn bo" style="padding:6px 12px;color:#e74c3c" onclick="exCli(${c.id})"><i class="ph ph-trash"></i></button>
-                </div>
-            </div>
-            <div style="display:flex; gap:15px; margin-top:15px; padding:12px; background:var(--bg); width:100%; border-radius:8px; border:1px solid var(--b)">
-                <span style="font-size:12px; font-weight:bold; color:var(--s); flex:1"><i class="ph ph-sigma"></i> Faturado: <br>${fM(tot)}</span>
-                <span style="font-size:12px; font-weight:bold; color:#2ecc71; flex:1"><i class="ph ph-check-circle"></i> Pago: <br>${fM(pg)}</span>
-                <span style="font-size:12px; font-weight:bold; color:#e74c3c; flex:1"><i class="ph ph-clock"></i> Pendente: <br>${fM(pn)}</span>
-            </div>
-            <div style="display:flex;gap:15px;flex-wrap:wrap;margin-top:12px;width:100%;">${c.tel?`<span style="font-size:12px;display:flex;gap:5px"><i class="ph ph-phone"></i> ${c.tel}</span>`:''}${c.ema?`<span style="font-size:12px;display:flex;gap:5px"><i class="ph ph-envelope"></i> ${c.ema}</span>`:''}${c.res?`<span style="font-size:12px;display:flex;gap:5px"><i class="ph ph-user"></i> ${c.res}</span>`:''}${c.end?`<span style="font-size:12px;width:100%;display:flex;gap:5px"><i class="ph ph-map-pin"></i> ${c.end}</span>`:''}</div>
-        </div>`;
+        let osC = dbO.filter(o=>o.cli===c.nome), tot=0, pg=0, pn=0; osC.forEach(o=>{tot+=o.val; if(o.pag)pg+=o.val; else pn+=o.val;});
+        l.innerHTML+=`<div class="osi" style="padding:20px;flex-direction:column;align-items:flex-start"><div style="width:100%;display:flex;justify-content:space-between"><div class="oi"><h4 style="margin:0"><i class="ph ph-buildings"></i> ${c.nome}</h4>${c.doc?`<span style="font-size:12px;color:var(--m);display:block;margin-top:4px"><i class="ph ph-identification-card"></i> ${c.doc}</span>`:''}</div><div class="ig"><button class="btn bo" style="padding:6px 12px; color:var(--p); border-color:var(--p)" onclick="vExt('${c.nome}')"><i class="ph ph-receipt"></i> Extrato</button><button class="btn bo" style="padding:6px 12px" onclick="edCli(${c.id})"><i class="ph ph-pencil"></i></button><button class="btn bo" style="padding:6px 12px;color:#e74c3c" onclick="exCli(${c.id})"><i class="ph ph-trash"></i></button></div></div><div style="display:flex; gap:15px; margin-top:15px; padding:12px; background:var(--bg); width:100%; border-radius:8px; border:1px solid var(--b)"><span style="font-size:12px; font-weight:bold; color:var(--s); flex:1">Faturado:<br>${fM(tot)}</span><span style="font-size:12px; font-weight:bold; color:#2ecc71; flex:1">Pago:<br>${fM(pg)}</span><span style="font-size:12px; font-weight:bold; color:#e74c3c; flex:1">Pendente:<br>${fM(pn)}</span></div></div>`;
     });
 };
 
 window.vExt = (nome) => {
-    let osCli = dbO.filter(o => o.cli === nome).sort((a,b)=>b.id-a.id);
-    let tot = 0, pago = 0, pend = 0;
-    let listHtml = osCli.map(o => {
-        tot += o.val; if(o.pag) pago+=o.val; else pend+=o.val;
-        return `<div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid var(--b); font-size:13px;">
-            <div><b>#${o.id.toString().slice(-6)}</b> | ${fD(o.dat)}<br><span style="color:var(--m)">${o.vei} - ${o.dsc.substring(0,30)}...</span></div>
-            <div style="text-align:right"><b>${fM(o.val)}</b><br><span style="color:${o.pag?'#2ecc71':'#e74c3c'}">${o.pag?'Pago':'Pendente'}</span></div>
-        </div>`;
-    }).join('');
-    if(osCli.length === 0) listHtml = '<p style="text-align:center; padding:20px; color:#aaa">Nenhum serviço registrado.</p>';
-
-    if($('mExtNome')) $('mExtNome').innerText = nome;
-    if($('mExtTot')) $('mExtTot').innerText = fM(tot);
-    if($('mExtPag')) $('mExtPag').innerText = fM(pago);
-    if($('mExtPen')) $('mExtPen').innerText = fM(pend);
-    if($('mExtList')) $('mExtList').innerHTML = listHtml;
+    let osCli = dbO.filter(o => o.cli === nome).sort((a,b)=>b.id-a.id), tot = 0, pago = 0, pend = 0;
+    let listHtml = osCli.map(o => { tot += o.val; if(o.pag) pago+=o.val; else pend+=o.val; return `<div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid var(--b); font-size:13px;"><div><b>#${o.id.toString().slice(-6)}</b> | ${fD(o.dat)}<br><span style="color:var(--m)">${o.vei} - ${o.dsc.substring(0,30)}...</span></div><div style="text-align:right"><b>${fM(o.val)}</b><br><span style="color:${o.pag?'#2ecc71':'#e74c3c'}">${o.pag?'Pago':'Pendente'}</span></div></div>`; }).join('');
+    if($('mExtNome')) $('mExtNome').innerText = nome; if($('mExtTot')) $('mExtTot').innerText = fM(tot); if($('mExtPag')) $('mExtPag').innerText = fM(pago); if($('mExtPen')) $('mExtPen').innerText = fM(pend); if($('mExtList')) $('mExtList').innerHTML = listHtml || '<p style="text-align:center; padding:20px; color:#aaa">Nenhum serviço registrado.</p>';
     if($('mExtrato')) $('mExtrato').style.display = 'flex';
 };
 window.fExt = () => { if($('mExtrato')) $('mExtrato').style.display = 'none'; };
 
 window.xCSVCli = () => {
-    let nome = $('mExtNome').innerText;
-    let osCli = dbO.filter(o => o.cli === nome);
-    let d=[['ID','Veiculo','Data','Hora','Status','Pagamento','Valor','Movimentacao','Eq_Instalado','Eq_Retirado']];
-    osCli.forEach(o=>d.push([o.id,o.vei,o.dat,o.hor,o.sts,o.pag?'Pago':'Pendente',o.val,o.mov||'',o.eqI||'',o.eqR||'']));
-    let c = d.map(r => r.map(v => `"${v||''}"`).join(';')).join('\n');
-    let a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,%EF%BB%BF' + encodeURIComponent(c); a.download = `Historico_${nome}.csv`; a.click();
-};
-
-if($('fCli')) {
-    $('fCli').onsubmit = async e => {
-        e.preventDefault();let id=v('cId'),o={nome:v('cNom').trim(),tel:v('cTel').trim(),doc:v('cDoc').trim(),ema:v('cEma').trim(),res:v('cRes').trim(),end:v('cEnd').trim()};id?dbC[dbC.findIndex(x=>x.id==id)]={...dbC.find(x=>x.id==id),...o}:(o.id=Date.now(),dbC.push(o));cCEd();await lf.setItem('dbC', dbC);aDl();rCli();tst.fire({icon:'success',title:'Salvo!'});
-    };
-}
-window.edCli=id=>{let c=dbC.find(x=>x.id==id);['cId','cNom','cDoc','cTel','cEma','cRes','cEnd'].map(k=>{if($(k))$(k).value=c[k.replace('c','').toLowerCase()]||(k=='cId'?id:'')});if($('bCSal'))$('bCSal').innerHTML="Atualizar";if($('bCCan'))$('bCCan').style.display="block";window.scrollTo(0,0)};
-window.cCEd=()=>{if($('fCli'))$('fCli').reset();if($('cId'))$('cId').value="";if($('bCSal'))$('bCSal').innerHTML="<i class='ph ph-plus'></i> Salvar";if($('bCCan'))$('bCCan').style.display="none"};
-window.exCli = async id => { try{Swal.fire({title:'Excluir?',icon:'warning',showCancelButton:!0,confirmButtonColor:'#d33'}).then(async r=>{if(r.isConfirmed){dbC=dbC.filter(c=>c.id!==id);await lf.setItem('dbC',dbC);rCli();aDl()}})}catch(e){if(confirm("Excluir?")){dbC=dbC.filter(c=>c.id!==id);lf.setItem('dbC',dbC).then(()=>{rCli();aDl();})}}};
-if($('bCliTxt')) $('bCliTxt').oninput=rCli;
-
-window.rC=()=>{if(!$('rCat')) return; let h='<option value="">-- Selecione --</option>';$('rCat').innerHTML='';dbCat.map(i=>{h+=`<option value="${i.id}">${i.nome} - ${fM(i.valor)}</option>`;$('rCat').innerHTML+=`<div class="cat"><span><i class="ph ph-check-circle" style="color:var(--p)"></i> ${i.nome} (${fM(i.valor)})</span><button class="btn bo" style="padding:6px 12px" onclick="rmC(${i.id})"><i class="ph ph-trash" style="color:#e74c3c"></i></button></div>`});if($('sCat'))$('sCat').innerHTML=h};
-window.aCat=()=>{let i=dbCat.find(x=>x.id==v('sCat'));if(i){if($('dsc'))$('dsc').value+=(v('dsc')?"\n":"")+"- "+i.nome;if($('val'))$('val').value=(parseFloat(v('val'))||0)+i.valor;if($('sCat'))$('sCat').value="";tst.fire({icon:'success',title:'Add!'})}};
-if($('fCat')) {
-    $('fCat').onsubmit = async e => { e.preventDefault();dbCat.push({id:Date.now(),nome:v('nCat'),valor:parseFloat(v('vCat'))});await lf.setItem('dbCat', dbCat);e.target.reset();rC();tst.fire({icon:'success',title:'Salvo'})};
-}
-window.rmC = async id => { dbCat=dbCat.filter(i=>i.id!==id);await lf.setItem('dbCat', dbCat);rC() };
-window.rCatP=()=>{try{Swal.fire({title:'Restaurar?',icon:'warning',showCancelButton:!0}).then(async r=>{if(r.isConfirmed){dbCat=[...cP];await lf.setItem('dbCat', dbCat);rC()}})}catch(e){if(confirm('Restaurar?')){dbCat=[...cP];lf.setItem('dbCat', dbCat).then(()=>rC())}}};
-window.aF=()=>{let c=dbC.find(x=>x.nome===v('cli').trim());if(c&&c.end){if($('end'))$('end').value=c.end;bGPS()}};
-window.bGPS=async()=>{let e=v('end');if(!e)return;if($('gps'))$('gps').value='Buscando...';try{let r=await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(e)),d=await r.json();if(d.length){if($('gps'))$('gps').value=d[0].lat+','+d[0].lon;tst.fire({icon:'success',title:'GPS Encontrado!'})}else{if($('gps'))$('gps').value='';tst.fire({icon:'error',title:'Endereço não localizado'})}}catch(x){if($('gps'))$('gps').value=''}};
-window.cGPS=()=>{if(!navigator.geolocation)return; navigator.geolocation.getCurrentPosition(p=>{if($('gps'))$('gps').value=`${p.coords.latitude},${p.coords.longitude}`;tst.fire({icon:'success',title:'GPS OK'})},e=>{try{Swal.fire('Erro','GPS Negado','error')}catch(ex){alert('GPS Negado')}})};
-window.oMap=()=>{v('gps')?window.open('https://maps.google.com/?q='+v('gps').replace(/ /g,''),'_blank'):tst.fire({icon:'error',title:'Preencha o GPS primeiro!'})};
-
-window.edO=id=>{let o=dbO.find(x=>x.id==id);['eId','cli','vei','dat','hor','end','gps','dsc','sts','pag','val'].map(k=>{if($(k))$(k).value=o[k]||(k=='pag'?0:(k=='eId'?id:''))});if($('fTit'))$('fTit').innerHTML=`<i class="ph ph-pencil"></i> Editar Agendamento #${id.toString().slice(-6)}`;if($('bSal'))$('bSal').innerHTML=`<i class="ph ph-floppy-disk"></i> ATUALIZAR`;if($('bCan'))$('bCan').style.display="block";sv('v-os',$$('.ni')[2]);window.scrollTo(0,0)};
-window.cEd=()=>{let d=new Date();if($('fOs'))$('fOs').reset();if($('eId'))$('eId').value="";if($('fTit'))$('fTit').innerHTML="Cadastrar Novo Serviço";if($('bSal'))$('bSal').innerHTML=`<i class="ph ph-cloud-arrow-up"></i> CADASTRAR O.S`;if($('bCan'))$('bCan').style.display="none";if($('dat'))$('dat').value=d.toISOString().split('T')[0];if($('hor'))$('hor').value=d.toTimeString().slice(0,5);if($('sts'))$('sts').value="Agendado";if($('pag'))$('pag').value="0";};
-window.exO = async id => { try{Swal.fire({title:'Excluir?',icon:'warning',showCancelButton:!0,confirmButtonColor:'#d33'}).then(async r=>{if(r.isConfirmed){dbO=dbO.filter(o=>o.id!==id);await lf.setItem('dbO', dbO);rL();rCal();rFin();rDsh();rExe()}})}catch(e){if(confirm("Excluir?")){dbO=dbO.filter(o=>o.id!==id);lf.setItem('dbO', dbO).then(()=>{rL();rCal();rFin();rDsh();rExe()})}}};
-
-window.rL=()=>{
-    if(!$('lOs')) return;
-    let l=$('lOs'), tx=v('bTxt').toLowerCase(), dt=v('bDat'), t=0;
-    
-    let list = [...dbO];
-    if(window.usrLat && window.usrLon) {
-        list.forEach(o => {
-            if(o.gps) { let pts = o.gps.split(','); if(pts.length==2) o._d = getDist(window.usrLat, window.usrLon, parseFloat(pts[0]), parseFloat(pts[1])); else o._d = 99999; } else o._d = 99999;
-        });
-        list.sort((a,b) => a._d - b._d);
-    } else { list.sort((a,b)=>b.id-a.id); }
-
-    let f=list.filter(o=>(o.cli.toLowerCase().includes(tx)||o.id.toString().includes(tx)||o.vei.toLowerCase().includes(tx))&&(dt?o.dat===dt:!0));
-    l.innerHTML=f.length?'':'<div style="text-align:center;padding:40px;color:#aaa">Nenhuma O.S.</div>';
-    f.map(o=>{
-        t+=o.val;
-        let s=o.sts, bC=s=="Concluído"?"con":(s=="Em Andamento"?"and":"");
-        let distHtml = o._d && o._d !== 99999 ? `<span style="font-size:11px; background:#e3f2fd; color:#1976d2; padding:2px 6px; border-radius:4px; margin-left:10px;"><i class="ph ph-navigation-arrow"></i> ${o._d.toFixed(1)} km</span>` : '';
-        
-        l.innerHTML+=`
-        <div class="osi" style="--stc:${s=='Concluído'?'#2ecc71':(s=='Em Andamento'?'#f39c12':'var(--b)')}">
-            <div class="oi">
-                <h4>${o.sync?'<i class="ph ph-cloud-check" style="color:#2ecc71" title="Sincronizado"></i>':'<i class="ph ph-cloud-slash" style="color:#e74c3c" title="Pendente"></i>'} #${o.id.toString().slice(-6)} - ${o.cli}</h4>
-                <p><i class="ph ph-truck"></i> ${o.vei} | <i class="ph ph-calendar-blank"></i> ${fD(o.dat)} às ${o.hor} ${distHtml}</p>
-                <p><i class="ph ph-wrench"></i> ${o.dsc.substring(0,40)}...</p>
-                <p style="font-size:11px; color:#aaa; margin-top:6px"><i class="ph ph-user"></i> Criado por: ${o.cBy||'N/A'} ${o.eBy ? `| Executado por: ${o.eBy}` : ''}</p>
-                <span class="bdg ${bC}">${s}</span>
-                <button class="btn bo" style="padding:2px 8px; font-size:10px; border:none; color:var(--a); margin-left:5px" onclick="hPlc('${o.vei}')"><i class="ph ph-clock-counter-clockwise"></i> Histórico Placa</button>
-            </div>
-            <div class="osa">
-                <span class="osv">${fM(o.val)}</span>
-                <div class="ig">
-                    <button class="btn bo" style="padding:6px 12px; color:#333; border-color:#333" title="Gerar PDF" onclick="gPDF(${o.id})"><i class="ph ph-printer"></i></button>
-                    <button class="btn bo" style="padding:6px 12px" title="Editar Info Base" onclick="edO(${o.id})"><i class="ph ph-pencil"></i></button>
-                    <button class="btn bo" style="padding:6px 12px;color:#e74c3c" title="Excluir" onclick="exO(${o.id})"><i class="ph ph-trash"></i></button>
-                </div>
-            </div>
-        </div>`;
-    });
-    if($('tFat'))$('tFat').innerText=`Fat: ${fM(t)}`;
-};
-
-window.xCSV = t => {
-    let d, n;
-    if(t=='o'){ d=[['ID','Cliente','Veiculo','Data','Hora','Endereco','GPS','Status','Pagamento','Valor','Movimentacao','Eq_Instalado','Eq_Retirado','Criado_Por','Executado_Por']]; dbO.map(o=>d.push([o.id,o.cli,o.vei,o.dat,o.hor,o.end,o.gps,o.sts,o.pag?'Pago':'Pendente',o.val,o.mov||'',o.eqI||'',o.eqR||'',o.cBy||'',o.eBy||''])); n='OS_Financeiro.csv'; }
-    if(t=='c'){ d=[['Nome','CNPJ/CPF','Telefone','Email','Contato','Endereco']]; dbC.map(c=>d.push([c.nome,c.doc,c.tel,c.ema,c.res,c.end])); n='Clientes.csv'; }
-    if(t=='k'){ d=[['Servico','Valor']]; dbCat.map(c=>d.push([c.nome,c.valor])); n='Catalogo.csv'; }
-    let c = d.map(r => r.map(v => `"${v||''}"`).join(';')).join('\n');
-    let a = document.createElement('a');
-    a.href = 'data:text/csv;charset=utf-8,%EF%BB%BF' + encodeURIComponent(c);
-    a.download = n;
-    a.click();
+    let nome = $('mExtNome').innerText, osCli = dbO.filter(o => o.cli === nome), d=[['ID','Veiculo','Data','Hora','Status','Pagamento','Valor']];
+    osCli.forEach(o=>d.push([o.id,o.vei,o.dat,o.hor,o.sts,o.pag?'Pago':'Pendente',o.val]));
+    let c = d.map(r => r.map(v => `"${v||''}"`).join(';')).join('\n'), a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,%EF%BB%BF' + encodeURIComponent(c); a.download = `Historico_${nome}.csv`; a.click();
 };
 </script></body></html>
