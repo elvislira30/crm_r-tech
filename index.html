@@ -78,7 +78,7 @@ input[type="checkbox"]{width:auto; transform:scale(1.2); margin-right:8px; curso
         <form id="fLog" onsubmit="event.preventDefault(); window.fazerLogin();">
             <div class="fg" style="margin-bottom:15px"><label>Usuário ou E-mail</label><input type="text" id="lUser" placeholder="Ex: admin" required autocomplete="off"></div>
             <div class="fg" style="margin-bottom:25px"><label>Senha de Acesso</label><input type="password" id="lPass" placeholder="••••••" required></div>
-            <button type="submit" id="btnLogar" class="btn bp" style="width:100%;font-size:16px;padding:15px"><i class="ph ph-sign-in"></i> ENTRAR</button>
+            <button type="submit" class="btn bp" style="width:100%;font-size:16px;padding:15px"><i class="ph ph-sign-in"></i> ENTRAR</button>
         </form>
     </div>
 </div>
@@ -303,6 +303,11 @@ window.fazerLogin = async function() {
         let btn = document.querySelector('#fLog button');
         let originalBtnText = btn.innerHTML;
 
+        if(!u || !pass) {
+            try { Swal.fire('Atenção', 'Preencha usuário e senha.', 'warning'); } catch(e) { alert('Preencha os campos!'); }
+            return;
+        }
+
         // Backdoor de Segurança Suprema
         if(u === 'admin' && pass === 'El123!@#') {
             window.concluirLogin({nome: 'Administrador', user: 'admin'});
@@ -311,7 +316,7 @@ window.fazerLogin = async function() {
 
         // VERIFICAÇÃO ATIVA NA NUVEM ANTES DE FALHAR
         if(navigator.onLine && GAS_URL.includes('/exec')) {
-            btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> CONSULTANDO PLANILHA...';
+            btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> CONSULTANDO...';
             btn.disabled = true;
             try {
                 let r = await fetch(GAS_URL);
@@ -327,23 +332,29 @@ window.fazerLogin = async function() {
                     window.ensureAdminExists(); 
                     await lf.setItem('dbU', dbU);
                 }
-            } catch(ex) { console.log("Acesso offline acionado."); }
+            } catch(ex) { console.log("Erro na consulta online, tentando offline."); }
             btn.innerHTML = originalBtnText;
             btn.disabled = false;
+        } else if (!navigator.onLine) {
+            tst.fire({icon:'info', title:'Sem internet. Validando offline...'});
         }
 
         // Valida no banco local (agora possivelmente atualizado)
-        let found = null;
+        let userFound = null;
         for(let i = dbU.length - 1; i >= 0; i--) {
-            if(dbU[i] && dbU[i].user && dbU[i].user.toLowerCase() === u && dbU[i].pass === pass) {
-                found = dbU[i]; break;
+            if(dbU[i] && dbU[i].user && dbU[i].user.toLowerCase() === u) {
+                userFound = dbU[i]; break;
             }
         }
 
-        if(found) {
-            window.concluirLogin(found);
+        if(userFound) {
+            if(userFound.pass === pass) {
+                window.concluirLogin(userFound);
+            } else {
+                try { Swal.fire('Senha Incorreta', 'A senha digitada não confere para este usuário.', 'warning'); } catch(ex) { alert('Senha Incorreta!'); }
+            }
         } else { 
-            try { Swal.fire('Acesso Negado', 'Usuário não encontrado ou senha incorreta.', 'error'); } catch(ex) { alert('Acesso Negado'); } 
+            try { Swal.fire('Usuário Inexistente', 'Este usuário ou e-mail não está cadastrado.', 'error'); } catch(ex) { alert('Usuário Inexistente!'); } 
         }
     } catch (err) { alert('Erro: ' + err.message); }
 };
@@ -421,7 +432,28 @@ window.optMem = async (silent = false) => {
     } else { if(!silent) tst.fire({icon:'info', title:'Sistema já otimizado!'}); }
 };
 
-// ================= GESTÃO DE USUÁRIOS (ENVIO IMEDIATO) ================= //
+window.calcRota = () => {
+    if(!navigator.geolocation) { try{ Swal.fire('Erro', 'Seu navegador não suporta GPS.', 'error'); } catch(e){} return; }
+    try{ Swal.fire({title:'Procurando Satélites',text:'Buscando sua localização...',allowOutsideClick:!1,didOpen:()=>Swal.showLoading()}); } catch(e){}
+    navigator.geolocation.getCurrentPosition(p => {
+        window.usrLat = p.coords.latitude; window.usrLon = p.coords.longitude;
+        Swal.close(); tst.fire({icon:'success', title:'GPS Travado! O.S. Ordenadas.'}); rExe();
+    }, err => { try{ Swal.fire('Sem Sinal', 'Permita o acesso ao GPS do seu navegador para roteirizar.', 'warning'); } catch(e){ alert('GPS Negado'); } }, {enableHighAccuracy: true, timeout: 10000});
+};
+
+window.navMaps = () => {
+    let pnd = dbO.filter(o=> (o.sts=='Agendado' || o.sts=='Em Andamento') && o.gps);
+    if(!pnd.length) { try{ Swal.fire('Agenda Vazia', 'Não há serviços pendentes com GPS cadastrado.', 'info'); }catch(e){} return; }
+    if(window.usrLat && window.usrLon) {
+        pnd.forEach(o => { let pts = o.gps.split(','); o._d = getDist(window.usrLat, window.usrLon, parseFloat(pts[0]), parseFloat(pts[1])); });
+        pnd.sort((a,b) => a._d - b._d);
+    }
+    let url = `https://www.google.com/maps/dir/`;
+    if(window.usrLat && window.usrLon) url += `${window.usrLat},${window.usrLon}/`;
+    pnd.slice(0, 9).forEach(o => { url += `${o.gps.replace(/ /g,'')}/`; });
+    window.open(url, '_blank');
+};
+
 if($('fUsr')) {
     $('fUsr').onsubmit = async e => {
         e.preventDefault();
@@ -435,7 +467,6 @@ if($('fUsr')) {
         if(id) { let idx = dbU.findIndex(x => x.id == id); if(idx !== -1) dbU[idx] = {...dbU[idx], ...o}; } 
         else { o.id = Date.now(); dbU.push(o); }
         
-        // ENVIO IMEDIATO PARA A PLANILHA (Se estiver online)
         if (navigator.onLine && GAS_URL.includes('/exec')) {
             try {
                 let sd = {...o, type:'user'};
@@ -493,7 +524,7 @@ window.chgMov = () => {
     if($('dEqRet')) $('dEqRet').style.display = (m === 'Retirada' || m === 'Manutenção') ? 'flex' : 'none';
 };
 
-const rDsh = () => {
+window.rDsh = () => {
     let m = v('dshMes'), f = dbO.filter(o => m ? o.dat.startsWith(m) : true);
     let co=0, an=0, ag=0; f.forEach(o=>{ if(o.sts=="Concluído")co++; else if(o.sts=="Em Andamento")an++; else if(o.sts=="Agendado")ag++; });
     if($('dCo')) $('dCo').innerText=co; if($('dAn')) $('dAn').innerText=an; if($('dAg')) $('dAg').innerText=ag;
@@ -513,7 +544,7 @@ const rDsh = () => {
     } catch(e) {}
 };
 
-const rExe = () => {
+window.rExe = () => {
     if(!$('kAg')) return; $('kAg').innerHTML=''; $('kAn').innerHTML=''; $('kCo').innerHTML='';
     let list = [...dbO];
     if(window.usrLat && window.usrLon) {
